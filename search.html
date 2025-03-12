@@ -5,7 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Search</title>
     <style>
-        body {
+	.no-bullets {
+    list-style-type: none; /* Removes the bullet points */
+    padding: 0;            /* Removes padding */
+    margin: 0;             /* Removes margin */
+}
+.category-copy-btn {
+
+  background-color: #007BFF; /* Button color */
+  color: white; /* Icon color */
+  font-size: 12px; /* Font size of the icon */
+  align-items: center;
+  justify-content: center;
+  border: none; /* Remove border */
+  border-radius: 5px;
+  cursor: pointer; /* Pointer cursor on hover */
+  transition: background-color 0.3s ease; /* Smooth transition */
+}
+.product-image {
+    width: 90%;
+    height: auto;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+.category-item{
+    font-size: 10px;
+    color: #555;
+	font-weight: bold;
+    color: #007bff;
+}
+.category-copy-btn:hover {
+    background-color: #218838;
+}
+    a {
+    font-size: 10px;
+    color: #555;
+	font-weight: bold;
+    color: #007bff;
+    }
+
+    /* Styling anchor tags when hovered */
+    a:hover {
+      color: red;            /* Changes text color to red on hover */
+      text-decoration: underline; /* Underlines the text when hovered */
+    }
+
+
+
+
+
+      body {
             font-family: Arial, sans-serif;
             background-color: #f9f9f9;
             margin: 0;
@@ -14,93 +63,110 @@
         h1 {
             text-align: center;
             color: #333;
-        }
+	}
         #searchBar {
-            width: 100%;
-            max-width: 600px;
-            padding: 10px;
-            font-size: 16px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            margin: 20px auto;
-            display: block;
-        }
-        #product-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-        .product {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .product:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-        }
-        .product h2 {
-            font-size: 18px;
-            margin: 0 0 10px;
-            color: #222;
-        }
-        .product p {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #555;
-        }
-        .product img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin-top: 10px;
-        }
-        .no-results {
-            text-align: center;
-            color: #ff4444;
-            font-size: 18px;
-            margin-top: 20px;
-            display: none; /* Hide by default */
-        }
-        .hidden {
-            display: none; /* Utility class to hide elements */
-        }
-        .copy-button {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            padding: 10px 15px;
-            font-size: 14px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-            width: 100%;
-            transition: background-color 0.3s ease;
-        }
-        .copy-button:hover {
-            background-color: #0056b3;
-        }
-        .copy-notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #4CAF50;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        .copy-notification.show {
-            opacity: 1;
-            visibility: visible;
-        }
+    width: 100%;
+    max-width: 600px;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    margin: 0 auto 20px;
+    display: block;
+    box-sizing: border-box;
+    position: fixed; /* Makes the search bar fixed at the top */
+    top: 20px; /* Add some space from the top of the page */
+    left: 50%;
+    transform: translateX(-50%); /* Center the search bar horizontally */
+    z-index: 1000; /* Ensure it's above other content */
+	}
+
+#searchBar:focus {
+    border-color: #007bff;
+    outline: none;
+	}
+
+     #product-container {
+	display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+	}
+	.product {
+	background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+	}
+	.product:hover {
+	transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+	}
+	.product h2 {
+	font-size: 12px;
+	width: fit-content;
+    margin: 0 0 10px;
+    color: #222;
+	}
+	.product p {
+     margin: 5px 0;
+    font-size: 10px;
+    color: #555;
+	}
+	.product img {
+	width: 100%;
+	height: auto;
+	border-radius: 8px;
+	margin-top: 10px;
+	}
+	.product .sku, .product .price {
+    font-weight: bold;
+    color: #007bff;
+}
+	.no-results {
+	text-align: center;
+	color: #ff4444;
+	font-size: 18px;
+	margin-top: 20px;
+	display: none; /* Hide by default */
+}
+	.hidden {
+	display: none; /* Utility class to hide elements */
+}
+	.copy-button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+    width: 100%;
+    transition: background-color 0.3s ease;
+}
+	.copy-button:hover {
+	background-color: #0056b3;
+	}
+	.copy-notification {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	background-color: #4CAF50;
+	color: white;
+	padding: 15px 25px;
+	border-radius: 5px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.3s ease, visibility 0.3s ease;
+	}
+	.copy-notification.show {
+	opacity: 1;
+	visibility: visible;
+	}
     </style>
 </head>
 <body>
@@ -116,7 +182,7 @@
 
         async function loadProducts() {
             try {
-                const response = await fetch('sc.json');
+                const response = await fetch('scraped_data.json');
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
@@ -142,22 +208,27 @@
                 productContainer.classList.remove('hidden');
 
                 productsToDisplay.forEach(product => {
-                    const productCard = document.createElement('div');
-                    productCard.className = 'product';
-                    productCard.innerHTML = `
-                        <h2>${product.title}</h2>
-                        <p><strong>SKU:</strong> ${product.sku}</p>
-                        <p><strong>Price:</strong> ${product.price} TK</p>
-						<a href="${product.url}" target="_blank">
-                        <img src="${product.image_url}" alt="${product.title}"><a/>
-                        <p><strong>Categories:</strong></p>
-                        <ul>
-                            ${product.categories.map(cat => `<li><a href="${cat.url}" target="_blank">${cat.name}</a></li>`).join('')}
-                        </ul>
-                        <button class="copy-button" onclick="copyToClipboard('${product.title}', '${product.price}', '${product.url}')">Copy Details</button>
-                    `;
-                    productContainer.appendChild(productCard);
-                });
+    const productCard = document.createElement('div');
+    productCard.className = 'product';
+    productCard.innerHTML = `
+        <h2>${product.title}</h2>
+        <p><strong>SKU:</strong> <span class="sku">${product.sku}</span></p>
+        <p><strong>Price:</strong> <span class="price">${product.price} TK</span></p>
+        <a href="${product.url}" target="_blank">
+        <img class="product-image" src="${product.image_url}" alt="${product.title}"></a>
+        <p class="category-item"><strong>Categories:</strong></p>
+        <ul class="no-bullets">
+            ${product.categories.map(cat => `
+                <li>
+                    <a href="${cat.url}" target="_blank">${cat.name}</a>
+                    <button class="category-copy-btn" onclick="copyCategoryUrl('${cat.url}', '${product.price} TK')">Copy</button>
+                </li>`).join('')}
+        </ul>
+        <button class="copy-button" onclick="copyToClipboard('${product.title}', '${product.price}', '${product.url}')">Copy Details</button>
+    `;
+    productContainer.appendChild(productCard);
+});
+
             }
         }
 
@@ -205,6 +276,25 @@
 
         // Load products when the page loads
         window.onload = loadProducts;
+
+
+function copyCategoryUrl(categoryUrl, price) {  // categoryUrl is the URL to be copied
+    try {
+        const textToCopy = `Price: ${price}\nCategory URL: ${categoryUrl}`;  // Corrected URL
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                showCopyNotification();
+            })
+            .catch((error) => {
+                console.error('Failed to copy:', error);
+                showCopyNotification('Failed to copy!', true);
+            });
+    } catch (error) {
+        console.error('Error copying category URL:', error);
+        showCopyNotification('Failed to copy!', true);
+    }
+}
+
     </script>
 </body>
 </html>
