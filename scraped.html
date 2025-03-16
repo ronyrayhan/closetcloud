@@ -252,7 +252,7 @@
             const price = product.querySelector(".price").textContent.trim();
             const url = product.querySelector("a").href;
 
-            const textToCopy = `Price: ${price}\nURL: ${url}`;
+            const textToCopy = `${price}\nURL: ${url}`;
 
             navigator.clipboard.writeText(textToCopy).then(() => {
                 showCopyNotification("Product details copied!");
@@ -264,7 +264,7 @@
 
         // Copy category URL and price to clipboard
         function copyCategoryUrl(url, price) {
-            const textToCopy = `Price: ${price}\nCategory URL: ${url}`;
+            const textToCopy = `${price}\nCategory URL: ${url}`;
             navigator.clipboard.writeText(textToCopy).then(() => {
                 showCopyNotification("Price & Category URL copied!");
             }).catch((error) => {
