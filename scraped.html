@@ -218,7 +218,7 @@
                         ${product.categories.map(cat => `
                             <a href="${cat.url}" target="_blank">${cat.name}</a>
                             <button class="category-copy-btn" 
-                                onclick="copyCategoryUrl('${cat.url}', '${product.price}TK')">
+                                onclick="copyCategoryUrl('${cat.url}', '${product.price}')">
                                 Copy
                             </button><br> 
                         `).join("")}
