@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scraped Products</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #filter-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1000px;
+			border: 2px solid #ddd;
+        }
+
+        #searchBar {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        #category-filter {
+            flex: 0 0 18%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #categoryFilter {
+            flex: 1;
+            padding: 8px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #price-filter {
+            flex: 0 0 25%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #price-filter input {
+            padding: 8px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 80px;
+            box-sizing: border-box;
+        }
+
+        #price-filter label {
+            font-size: 14px;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        #clearFilters {
+            padding: 10px 15px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            color: #333;
+            cursor: pointer;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        #clearFilters:hover {
+            background-color: #ddd;
+            border-color: #bbb;
+        }
+
+        #product-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            margin-top: 120px;
+        }
+
+        .product {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .product h2 {
+            font-size: 12px;
+            width: fit-content;
+            margin: 0 0 10px;
+            color: #222;
+        }
+
+        .product p {
+            margin: 5px 0;
+            font-size: 10px;
+            color: #555;
+        }
+
+        .product .sku, .product .price {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .product-image {
+            width: 90%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 10px;
+            left: 50%;
+        }
+
+        a {
+            text-decoration: none;
+            color: blue;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+        }
+
+        .copy-button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+
+        .copy-button:hover {
+            background-color: #0056b3;
+        }
+
+        .category-copy-btn {
+            background-color: #007BFF;
+            color: white;
+            font-size: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .category-copy-btn:hover {
+            background-color: #218838;
+        }
+
+        #copy-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+
+        #copy-notification.show {
+            display: block;
+        }
+
+        #loading {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 20px;
+            display: none;
+        }
+
+    </style>
+   <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+</head>
+<body>
+    <div id="filter-container">
+        <input type="text" id="searchBar" placeholder="Hit enter to search">
+        <div id="category-filter">
+            <select id="categoryFilter">
+                <option value="all">All Categories</option>
+            </select>
+        </div>
+        <div id="price-filter">
+            <input type="number" id="minPrice" placeholder="Min Price" min="0">
+            <input type="number" id="maxPrice" placeholder="Max Price" min="0">
+        </div>
+        <button id="clearFilters">Clear Filters</button>
+    </div>
+
+    <div id="loading">Loading products...</div>
+    <div id="product-container"></div>
+    <div id="copy-notification"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script>
+        // Load the SQLite database file
+        async function loadDatabase() {
+            try {
+                const response = await fetch("scraped_data.db");
+                if (!response.ok) throw new Error("Failed to load database");
+                const arrayBuffer = await response.arrayBuffer();
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                });
+                const db = new SQL.Database(new Uint8Array(arrayBuffer));
+                return db;
+            } catch (error) {
+                console.error("Error loading database:", error);
+                alert("Failed to load the database. Please try again later.");
+            }
+        }
+
+        // Fetch and display products
+        async function fetchProducts() {
+            document.getElementById("loading").style.display = "block";
+            const db = await loadDatabase();
+            const query = "SELECT * FROM products";
+            const results = db.exec(query);
+            document.getElementById("loading").style.display = "none";
+
+            if (results.length > 0) {
+                const products = results[0].values.map(row => ({
+                    id: row[0],
+                    title: row[1],
+                    sku: row[2],
+                    price: parseFloat(row[3]), // Ensure price is a number
+                    image_url: row[4],
+                    url: row[5],
+                    categories: JSON.parse(row[6])
+                }));
+                localStorage.setItem("products", JSON.stringify(products)); // Store products in localStorage
+                displayProducts(products);
+                populateCategoryFilter(products); // Populate the category filter
+                setupPriceFilter(products); // Setup price filter
+            }
+        }
+
+        // Setup price filter event listeners
+        function setupPriceFilter(products) {
+            const minPriceInput = document.getElementById("minPrice");
+            const maxPriceInput = document.getElementById("maxPrice");
+
+            // Add event listeners for price filtering
+            minPriceInput.addEventListener("input", () => filterProducts(products));
+            maxPriceInput.addEventListener("input", () => filterProducts(products));
+        }
+
+        // Filter products based on price, category, and search query
+function filterProducts(products) {
+    const minPrice = parseFloat(document.getElementById("minPrice").value) || 0;
+    const maxPrice = parseFloat(document.getElementById("maxPrice").value) || Infinity;
+    const selectedCategory = document.getElementById("categoryFilter").value;
+    const searchQuery = document.getElementById("searchBar").value.toLowerCase();
+
+    const filteredProducts = products.filter(product => {
+        const matchesPrice = product.price >= minPrice && product.price <= maxPrice;
+        const matchesCategory = selectedCategory === "all" || product.categories.some(cat => cat.name === selectedCategory);
+        const matchesSearch = product.title.toLowerCase().includes(searchQuery) ||
+                              product.sku.toLowerCase().includes(searchQuery) ||
+                              product.categories.some(cat => cat.name.toLowerCase().includes(searchQuery));
+
+        return matchesPrice && matchesCategory && matchesSearch;
+    });
+
+    displayProducts(filteredProducts);
+}
+
+        // Populate the category filter dropdown
+        function populateCategoryFilter(products) {
+            const categoryFilter = document.getElementById("categoryFilter");
+            const categories = new Set();
+
+            // Extract unique categories
+            products.forEach(product => {
+                product.categories.forEach(cat => {
+                    categories.add(cat.name);
+                });
+            });
+
+            // Add categories to the dropdown
+            categories.forEach(cat => {
+                const option = document.createElement("option");
+                option.value = cat;
+                option.textContent = cat;
+                categoryFilter.appendChild(option);
+            });
+
+            // Add event listener for filtering
+            categoryFilter.addEventListener("change", () => {
+                const products = JSON.parse(localStorage.getItem("products") || "[]");
+                filterProducts(products);
+            });
+        }
+
+        // Display products in the HTML
+        function displayProducts(products) {
+            const container = document.getElementById("product-container");
+            container.innerHTML = products.map(product => `
+                <div class="product" data-categories="${product.categories.map(cat => cat.name).join(" ")}">
+                    <h2>${product.title}</h2>
+                    <p><strong>SKU:</strong> ${product.sku}</p>
+                    <p class="price"><strong>Price:</strong> ${product.price}</p>
+                    <a href="${product.url}" target="_blank">
+                        <img class="product-image" src="${product.image_url}" alt="${product.title}">
+                    </a>
+                    <p>
+                        ${product.categories.map(cat => `
+                            <a href="${cat.url}" target="_blank">${cat.name}</a>
+                            <button class="category-copy-btn" 
+                                onclick="copyCategoryUrl('${cat.url}', '${product.price}')">
+                                Copy
+                            </button><br> 
+                        `).join("")}
+                    </p>
+                    <button class="copy-button" onclick="copyToClipboard(this)">Copy Product Details</button>
+                </div>
+            `).join("");
+        }
+
+        // Copy product details to clipboard
+        function copyToClipboard(button) {
+            const product = button.closest(".product");
+            const price = product.querySelector(".price").textContent.trim();
+            const url = product.querySelector("a").href;
+
+            const textToCopy = `${price}\nURL: ${url}`;
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showCopyNotification("Product details copied!");
+            }).catch((error) => {
+                console.error("Failed to copy:", error);
+                showCopyNotification("Failed to copy.", true);
+            });
+        }
+
+        // Copy category URL and price to clipboard
+        function copyCategoryUrl(url, price) {
+            const textToCopy = `${price}\nCategory URL: ${url}`;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showCopyNotification("Price & Category URL copied!");
+            }).catch((error) => {
+                console.error("Failed to copy:", error);
+                showCopyNotification("Failed to copy.", true);
+            });
+        }
+
+        // Show copy notification
+        function showCopyNotification(message = "Copy Successful!", isError = false) {
+            const notification = document.getElementById("copy-notification");
+            notification.textContent = message;
+            notification.style.backgroundColor = isError ? "#ff4444" : "#4CAF50";
+            notification.classList.add("show");
+
+            setTimeout(() => {
+                notification.classList.remove("show");
+            }, 1000);
+        }
+
+        // Clear all filters
+        document.getElementById("clearFilters").addEventListener("click", () => {
+            // Reset search bar
+            document.getElementById("searchBar").value = "";
+
+            // Reset category filter
+            document.getElementById("categoryFilter").value = "all";
+
+            // Reset price range inputs
+            document.getElementById("minPrice").value = "";
+            document.getElementById("maxPrice").value = "";
+
+            // Re-fetch and display all products
+            const products = JSON.parse(localStorage.getItem("products") || "[]");
+            filterProducts(products);
+        });
+
+        // Add event listener for search bar input
+document.getElementById("searchBar").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        const products = JSON.parse(localStorage.getItem("products") || "[]");
+        filterProducts(products);
+    }
+});
+
+        // Load products on page load
+        fetchProducts();
+    </script>
+</body>
+</html>
