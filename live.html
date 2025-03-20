@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catalogue Management</title>
+   <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #searchBar {
+            width: 100%;
+            max-width: 600px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 0 auto 20px;
+            display: block;
+            box-sizing: border-box;
+        }
+
+        #catalogue-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .catalogue {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .catalogue:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .catalogue h2 {
+            margin: 0 0 10px;
+            color: #222;
+        }
+
+        .catalogue p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .catalogue img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .primary-image {
+            border: 3px solid #007bff;
+        }
+
+        .secondary-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .secondary-images img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .actions button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .actions button:hover {
+            background-color: #0056b3;
+        }
+
+        .actions button.delete {
+            background-color: #ff4444;
+        }
+
+        .actions button.delete:hover {
+            background-color: #cc0000;
+        }
+
+        #add-catalogue-form {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #add-catalogue-form h2 {
+            margin-top: 0;
+        }
+
+        #add-catalogue-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        #add-catalogue-form input,
+        #add-catalogue-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .drop-zone {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        .drop-zone.dragover {
+            background-color: #f0f8ff;
+        }
+
+        .drop-zone p {
+            margin: 0;
+            color: #555;
+        }
+
+        .drop-zone img {
+            max-width: 100%;
+            max-height: 150px;
+            margin-top: 10px;
+        }
+
+        /* Style for the dropdown */
+        details {
+            margin-top: 10px;
+        }
+
+        summary {
+            font-weight: bold;
+            cursor: pointer;
+            color: #007bff;
+        }
+
+        summary:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<input type="text" id="searchBar" placeholder="Search catalogues by name, artist, brand, or date (YYYY-MM-DD)...">    <div id="loading">Loading catalogues...</div>
+    <div id="catalogue-container"></div>
+
+
+    <!-- Include SQL.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script>
+        // Initialize SQL.js and load the database
+        async function loadDatabase() {
+            const response = await fetch("cat.db"); // Path to your .db file
+            const arrayBuffer = await response.arrayBuffer();
+            const SQL = await initSqlJs({
+                locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+            });
+            const db = new SQL.Database(new Uint8Array(arrayBuffer));
+            return db;
+        }
+
+        // Fetch and display catalogues
+        async function fetchCatalogues() {
+            document.getElementById("loading").style.display = "block";
+            try {
+                const db = await loadDatabase();
+                const query = "SELECT * FROM catalogues"; // Adjust the table name if needed
+                const results = db.exec(query);
+
+                if (results.length > 0) {
+                    const catalogues = results[0].values.map(row => ({
+                        id: row[0],
+                        name: row[1],
+                        liveArtist: row[2],
+                        brandName: row[3],
+                        liveDate: row[4],
+                        primaryImage: row[5],
+                        secondaryImages: JSON.parse(row[6]) // Assuming secondaryImages is stored as JSON
+                    }));
+                    displayCatalogues(catalogues);
+                }
+            } catch (error) {
+                console.error("Error loading database:", error);
+                alert("Failed to load catalogues. Please try again later.");
+            } finally {
+                document.getElementById("loading").style.display = "none";
+            }
+        }
+
+        // Display catalogues in the HTML
+        function displayCatalogues(catalogues) {
+            const container = document.getElementById("catalogue-container");
+            container.innerHTML = catalogues.map(catalogue => `
+                <div class="catalogue">
+                    <h2>${catalogue.name}</h2>
+                    <p><strong>Live Artist:</strong> ${catalogue.liveArtist}</p>
+                    <p><strong>Brand:</strong> ${catalogue.brandName}</p>
+                    <p><strong>Live Date:</strong> ${catalogue.liveDate}</p>
+                    <img class="primary-image" src="${catalogue.primaryImage}" alt="Primary Image">
+                    <details>
+                        <summary>View Secondary Images</summary>
+                        <div class="secondary-images">
+                            ${catalogue.secondaryImages.map(img => `
+                                <img src="${img}" alt="Secondary Image">
+                            `).join("")}
+                        </div>
+                    </details>
+
+                </div>
+            `).join("");
+        }
+
+
+document.getElementById("searchBar").addEventListener("input", (e) => {
+    const query = e.target.value.toLowerCase();
+    const catalogues = document.querySelectorAll(".catalogue");
+    catalogues.forEach(catalogue => {
+        const name = catalogue.querySelector("h2").textContent.toLowerCase();
+        const artist = catalogue.querySelector("p:nth-of-type(1)").textContent.toLowerCase();
+        const brand = catalogue.querySelector("p:nth-of-type(2)").textContent.toLowerCase();
+        const date = catalogue.querySelector("p:nth-of-type(3)").textContent.toLowerCase();
+
+        // Check if the query matches any of the fields (name, artist, brand, or date)
+        if (
+            name.includes(query) ||
+            artist.includes(query) ||
+            brand.includes(query) ||
+            date.includes(query)
+        ) {
+            catalogue.style.display = "block";
+        } else {
+            catalogue.style.display = "none";
+        }
+    });
+});
+
+        // Load catalogues on page load
+        fetchCatalogues();
+    </script>
+</body>
+</html>
