@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scraped Products</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #searchBar {
+            width: 100%;
+            max-width: 600px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 0 auto 20px;
+            display: block;
+            box-sizing: border-box;
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+
+        #searchBar:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        #product-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            margin-top: 80px; /* Space for fixed search bar */
+        }
+
+        .product {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .product h2 {
+            font-size: 12px;
+            width: fit-content;
+            margin: 0 0 10px;
+            color: #222;
+        }
+
+        .product p {
+            margin: 5px 0;
+            font-size: 10px;
+            color: #555;
+        }
+
+        .product .sku, .product .price {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .product-image {
+            width: 90%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 10px;
+            left: 50%;
+        }
+
+        a {
+            text-decoration: none;
+            color: blue;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+        }
+
+        .copy-button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+
+        .copy-button:hover {
+            background-color: #0056b3;
+        }
+
+        .category-copy-btn {
+            background-color: #007BFF;
+            color: white;
+            font-size: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .category-copy-btn:hover {
+            background-color: #218838;
+        }
+
+        #copy-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+
+        #copy-notification.show {
+            display: block;
+        }
+
+        #loading {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        #hideUncategorized {
+            margin: 20px;
+        }
+
+        @media (max-width: 768px) {
+            #product-container {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            #product-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+<link rel="icon" href="/favicon.ico" type="image/png">
+</head>
+<body>
+
+    <!-- Checkbox to hide "Uncategorized" category -->
+    <label for="hideUncategorized">
+        <input type="checkbox" id="hideUncategorized"> Hide "Uncategorized" products
+    </label>
+
+    <input type="text" id="searchBar" placeholder="Search products by title, SKU, or category...">
+    <div id="loading">Loading products...</div>
+    <div id="product-container"></div>
+    <div id="copy-notification"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script>
+        // Load the SQLite database file
+        async function loadDatabase() {
+            try {
+                const response = await fetch("scraped_data.db");
+                if (!response.ok) throw new Error("Failed to load database");
+                const arrayBuffer = await response.arrayBuffer();
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                });
+                const db = new SQL.Database(new Uint8Array(arrayBuffer));
+                return db;
+            } catch (error) {
+                console.error("Error loading database:", error);
+                alert("Failed to load the database. Please try again later.");
+            }
+        }
+
+        // Fetch and display products
+        async function fetchProducts() {
+            document.getElementById("loading").style.display = "block";
+            const db = await loadDatabase();
+            const query = "SELECT * FROM products";
+            const results = db.exec(query);
+            document.getElementById("loading").style.display = "none";
+
+            if (results.length > 0) {
+                const products = results[0].values.map(row => ({
+                    id: row[0],
+                    title: row[1],
+                    sku: row[2],
+                    price: row[3],
+                    image_url: row[4],
+                    url: row[5],
+                    categories: JSON.parse(row[6])
+                }));
+                displayProducts(products);
+            }
+        }
+
+        // Display products in the HTML, filtering out "Uncategorized" if checkbox is checked
+        function displayProducts(products) {
+            const hideUncategorized = document.getElementById("hideUncategorized").checked;
+
+            const container = document.getElementById("product-container");
+            container.innerHTML = products
+                .filter(product => {
+                    if (hideUncategorized) {
+                        return !product.categories.some(cat => cat.name.toLowerCase() === "uncategorized");
+                    }
+                    return true;
+                })
+                .map(product => `
+                    <div class="product">
+                        <h2>${product.title}</h2>
+                        <p><strong>SKU:</strong> ${product.sku}</p>
+                        <p class="price"><strong>Price:</strong> ${product.price}</p>
+                        <a href="${product.url}" target="_blank">
+                            <img class="product-image" src="${product.image_url}" alt="${product.title}">
+                        </a>
+                        <p>
+                            ${product.categories.map(cat => `
+                                <a href="${cat.url}" target="_blank">${cat.name}</a>
+                                <button class="category-copy-btn" 
+                                    onclick="copyCategoryUrl('${cat.url}', '${product.price}')">
+                                    Copy
+                                </button><br> 
+                            `).join("")}
+                        </p>
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy Product Details</button>
+                    </div>
+                `).join("");
+        }
+
+        // Search products
+        document.getElementById("searchBar").addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+            const products = document.querySelectorAll(".product");
+            products.forEach(product => {
+                const title = product.querySelector("h2").textContent.toLowerCase();
+                const sku = product.querySelector("p").textContent.toLowerCase();
+                const categories = product.querySelector(".categories")?.textContent.toLowerCase() || "";
+                const price = product.querySelector(".price").textContent.toLowerCase();
+
+                if (title.includes(query) || sku.includes(query) || categories.includes(query) || price.includes(query)) {
+                    product.style.display = "block";
+                } else {
+                    product.style.display = "none";
+                }
+            });
+        });
+
+        // Copy product details to clipboard
+        function copyToClipboard(button) {
+            const product = button.closest(".product");
+            const price = product.querySelector(".price").textContent.trim();
+            const url = product.querySelector("a").href;
+
+            const textToCopy = `${price}\nURL: ${url}`;
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showCopyNotification("Product details copied!");
+            }).catch((error) => {
+                console.error("Failed to copy:", error);
+                showCopyNotification("Failed to copy.", true);
+            });
+        }
+
+        // Copy category URL and price to clipboard
+        function copyCategoryUrl(url, price) {
+            const textToCopy = `${price}\nCategory URL: ${url}`;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showCopyNotification("Price & Category URL copied!");
+            }).catch((error) => {
+                console.error("Failed to copy:", error);
+                showCopyNotification("Failed to copy.", true);
+            });
+        }
+
+        // Show copy notification
+        function showCopyNotification(message = "Copy Successful!", isError = false) {
+            const notification = document.getElementById("copy-notification");
+            notification.textContent = message;
+            notification.style.backgroundColor = isError ? "#ff4444" : "#4CAF50";
+            notification.classList.add("show");
+
+            setTimeout(() => {
+                notification.classList.remove("show");
+            }, 1000);
+        }
+
+        // Load products on page load
+        fetchProducts();
+
+        // Re-filter products when checkbox is changed
+        document.getElementById("hideUncategorized").addEventListener("change", () => {
+            fetchProducts();
+        });
+    </script>
+</body>
+</html>
