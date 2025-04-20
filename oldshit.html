@@ -156,7 +156,7 @@
 <link rel="icon" href="/favicon.ico" type="image/png">
 </head>
 <body>
-
+<div id="product-count">Loading products...</div>
     <input type="text" id="searchBar" placeholder="Search products by title, SKU, or category...">
     <div id="loading">Loading products...</div>
     <div id="product-container"></div>
@@ -166,7 +166,8 @@
     <script>
         // Load the SQLite database file
         async function loadDatabase() {
-            try {
+            try {      
+
                 const response = await fetch("scraped_data.db");
                 if (!response.ok) throw new Error("Failed to load database");
                 const arrayBuffer = await response.arrayBuffer();
@@ -206,6 +207,8 @@
         // Display products in the HTML
         function displayProducts(products) {
             const container = document.getElementById("product-container");
+			const countDisplay = document.getElementById("product-count");
+			countDisplay.textContent = `Total Products: ${products.length}`;
             container.innerHTML = products.map(product => `
                 <div class="product">
                     <h2>${product.title}</h2>
