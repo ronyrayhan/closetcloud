@@ -3,52 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WWhere are you now?</title>
+    <title>Holy Shit</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             text-align: center;
-            padding: 50px;
-            background-color: #f0f0f0;
         }
+
+        h1 {
+            color: #333;
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 300px;
+            animation: fadeIn 0.5s ease-out; /* Optional: fade in heading too */
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 300px;
+        }
+
         .button {
-            font-size: 16px;
-            padding: 10px 20px;
-            margin: 10px;
-            cursor: pointer;
             border: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        .button-1 {
-           background-color: #007bff;
-            color: #fff;
-        }
-        .button-1:hover {
-            background-color: #ff1a1a;
-        }
-        .button-2 {
-            background-color: #4dff4d;
             color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            
+            /* Fade-in animation */
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
         }
-        .button-2:hover {
-            background-color: #33cc33;
+
+        /* Button colors (unchanged) */
+        .button-1 { background-color: #4CAF50; }
+        .button-2 { background-color: #2196F3; }
+        .button-3 { background-color: #ff9800; }
+        .button-4 { background-color: #9C27B0; }
+
+        /* Hover effects (unchanged) */
+        .button-1:hover { background-color: #3e8e41; }
+        .button-2:hover { background-color: #0b7dda; }
+        .button-3:hover { background-color: #e68a00; }
+        .button-4:hover { background-color: #7B1FA2; }
+
+        /* Animation keyframes */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-           .button-3 {
-            background-color: #33cc33;
-            color: white;
-        }
-        .button-3:hover {
-            background-color: #4dff4d;
-        }
+
+        /* Staggered animation delays */
+        .button:nth-child(1) { animation-delay: 0.2s; }
+        .button:nth-child(2) { animation-delay: 0.4s; }
+        .button:nth-child(3) { animation-delay: 0.6s; }
+        .button:nth-child(4) { animation-delay: 0.8s; }
     </style>
 </head>
 <body>
     <h1>Holy Shit</h1>
-    <button class="button button-1" onclick="window.location.href='oldshit.html'">OLD SHIT</button>
-    <button class="button button-2" onclick="window.location.href='newshit.html'">NEW SHIT</button>
-    <button class="button button-3" onclick="window.location.href='http://192.168.0.143'">Live Catalogue</button>
-
-    
+    <div class="button-container">
+        <a href="oldshit.html" target="_blank" rel="noopener noreferrer" class="button button-1">OLD SHIT</a>
+        <a href="newshit.html" target="_blank" rel="noopener noreferrer" class="button button-2">NEW SHIT</a>
+        <a href="site.html" target="_blank" rel="noopener noreferrer" class="button button-3">OLD CC Product</a>
+        <a href="http://192.168.0.143" target="_blank" rel="noopener noreferrer" class="button button-4">Live Catalogue</a>
+    </div>
 </body>
 </html>
