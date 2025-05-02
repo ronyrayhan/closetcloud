@@ -5,34 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scraped Products</title>
     <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --text-color: #212529;
+            --bg-color: #f9f9f9;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text-color: #e0e0e0;
+                --bg-color: #121212;
+                --card-bg: #1e1e1e;
+                --border-color: #333;
+            }
+        }
+
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #f9f9f9;
-            color: #333;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
             padding: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-color);
+            padding: 15px 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         #searchBar {
-            width: 100%;
-            max-width: 600px;
+            flex: 1;
+            min-width: 200px;
             padding: 12px;
             font-size: 16px;
-            border: 2px solid #ddd;
+            border: 2px solid var(--border-color);
             border-radius: 8px;
-            margin: 0 auto 20px;
-            display: block;
             box-sizing: border-box;
-            position: fixed;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
         }
 
-        #searchBar:focus {
-            border-color: #007bff;
-            outline: none;
+        #sortOptions, #categoryFilter, #exportBtn {
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        #product-count {
+            margin: 80px 0 20px;
+            font-size: 14px;
+            color: var(--secondary-color);
         }
 
         #product-container {
@@ -40,54 +81,56 @@
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             padding: 20px;
-            margin-top: 80px; /* Space for fixed search bar */
         }
 
         .product {
-            background-color: #fff;
-            border: 1px solid #ddd;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
+        .product:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
         .product h2 {
-            font-size: 12px;
-            width: fit-content;
+            font-size: 16px;
             margin: 0 0 10px;
-            color: #222;
+            color: var(--text-color);
         }
 
         .product p {
             margin: 5px 0;
-            font-size: 10px;
-            color: #555;
+            font-size: 14px;
+            color: var(--secondary-color);
         }
 
         .product .sku, .product .price {
             font-weight: bold;
-            color: #007bff;
+            color: var(--primary-color);
         }
 
         .product-image {
-            width: 90%;
-            height: auto;
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
             border-radius: 8px;
-            margin-top: 10px;
-			left: 50%;
+            margin: 10px 0;
+            background-color: #f5f5f5;
         }
 
         a {
             text-decoration: none;
-            color: blue;
+            color: var(--primary-color);
             font-weight: bold;
-            font-family: Arial, sans-serif;
-            font-size: 10px;
         }
 
         .copy-button {
-            background-color: #007bff;
+            background-color: var(--primary-color);
             color: #fff;
             border: none;
             padding: 10px 15px;
@@ -104,17 +147,19 @@
         }
 
         .category-copy-btn {
-            background-color: #007BFF;
+            background-color: var(--primary-color);
             color: white;
             font-size: 12px;
             border: none;
             border-radius: 5px;
+            padding: 5px 10px;
+            margin-left: 5px;
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
 
         .category-copy-btn:hover {
-            background-color: #218838;
+            background-color: var(--success-color);
         }
 
         #copy-notification {
@@ -122,7 +167,7 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: #4CAF50;
+            background-color: var(--success-color);
             color: white;
             padding: 10px 20px;
             border-radius: 5px;
@@ -130,15 +175,46 @@
             z-index: 1000;
         }
 
-        #copy-notification.show {
-            display: block;
-        }
-
         #loading {
             text-align: center;
-            font-size: 18px;
-            margin-top: 20px;
+            margin: 50px auto;
             display: none;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 5px;
+        }
+
+        .page-btn {
+            padding: 8px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .page-btn:disabled {
+            background-color: var(--secondary-color);
+            cursor: not-allowed;
         }
 
         @media (max-width: 768px) {
@@ -148,120 +224,302 @@
         }
 
         @media (max-width: 480px) {
+            .controls {
+                flex-direction: column;
+            }
             #product-container {
                 grid-template-columns: 1fr;
             }
         }
     </style>
-<link rel="icon" href="/favicon.ico" type="image/png">
+    <link rel="icon" href="/favicon.ico" type="image/png">
 </head>
 <body>
-<div id="product-count">Loading products...</div>
-    <input type="text" id="searchBar" placeholder="Search products by title, SKU, or category...">
-    <div id="loading">Loading products...</div>
+    <div class="controls">
+        <input type="text" id="searchBar" placeholder="Search products...">
+        <select id="sortOptions">
+            <option value="title_asc">Title (A-Z)</option>
+            <option value="title_desc">Title (Z-A)</option>
+            <option value="price_asc">Price (Low-High)</option>
+            <option value="price_desc">Price (High-Low)</option>
+        </select>
+        <select id="categoryFilter">
+            <option value="all">All Categories</option>
+        </select>
+        <button id="exportBtn">Export to JSON</button>
+    </div>
+
+    <div id="product-count">Loading products...</div>
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Loading products...</p>
+    </div>
     <div id="product-container"></div>
+    <div class="pagination">
+        <button id="prevPage" class="page-btn">Previous</button>
+        <span id="pageInfo">Page 1 of 1</span>
+        <button id="nextPage" class="page-btn">Next</button>
+    </div>
     <div id="copy-notification"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script>
+        // Configuration
+        const PRODUCTS_PER_PAGE = 20;
+        const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/'; // Replace with your own proxy if needed
+        
+        // State management
+        let allProducts = [];
+        let filteredProducts = [];
+        let currentPage = 1;
+        let totalPages = 1;
+        let categories = [];
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('loading').style.display = 'block';
+            await fetchProducts();
+            setupEventListeners();
+            document.getElementById('loading').style.display = 'none';
+        });
+
         // Load the SQLite database file
         async function loadDatabase() {
-            try {      
-
+            try {
                 const response = await fetch("scraped_data.db");
                 if (!response.ok) throw new Error("Failed to load database");
                 const arrayBuffer = await response.arrayBuffer();
                 const SQL = await initSqlJs({
                     locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
                 });
-                const db = new SQL.Database(new Uint8Array(arrayBuffer));
-                return db;
+                return new SQL.Database(new Uint8Array(arrayBuffer));
             } catch (error) {
                 console.error("Error loading database:", error);
-                alert("Failed to load the database. Please try again later.");
+                showNotification("Failed to load the database. Please try again later.", true);
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: var(--danger-color);">Error loading database</p>
+                    <button onclick="location.reload()">Retry</button>
+                `;
+                return null;
             }
         }
 
-        // Fetch and display products
+        // Fetch and process products
         async function fetchProducts() {
-            document.getElementById("loading").style.display = "block";
             const db = await loadDatabase();
-            const query = "SELECT * FROM products";
+            if (!db) return;
+
+            const query = "SELECT * FROM products ORDER BY title ASC";
             const results = db.exec(query);
-            document.getElementById("loading").style.display = "none";
 
             if (results.length > 0) {
-                const products = results[0].values.map(row => ({
+                allProducts = results[0].values.map(row => ({
                     id: row[0],
                     title: row[1],
                     sku: row[2],
-                    price: row[3],
+                    price: formatPrice(row[3]),
                     image_url: row[4],
                     url: row[5],
                     categories: JSON.parse(row[6])
                 }));
-                displayProducts(products);
+
+                // Extract unique categories
+                categories = [...new Set(
+                    allProducts.flatMap(p => p.categories.map(c => c.name))
+                )].sort();
+                
+                buildCategoryFilter();
+                filterAndSortProducts();
+                updateProductCount();
             }
         }
 
-        // Display products in the HTML
-        function displayProducts(products) {
-            const container = document.getElementById("product-container");
-			const countDisplay = document.getElementById("product-count");
-			countDisplay.textContent = `Total Products: ${products.length}`;
-            container.innerHTML = products.map(product => `
+        // Setup all event listeners
+        function setupEventListeners() {
+            // Search input with debounce
+            let searchTimeout;
+            document.getElementById('searchBar').addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    filterAndSortProducts();
+                }, 300);
+            });
+
+            // Sort options
+            document.getElementById('sortOptions').addEventListener('change', () => {
+                filterAndSortProducts();
+            });
+
+            // Category filter
+            document.getElementById('categoryFilter').addEventListener('change', () => {
+                filterAndSortProducts();
+            });
+
+            // Pagination
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayCurrentPage();
+                }
+            });
+
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayCurrentPage();
+                }
+            });
+
+            // Export button
+            document.getElementById('exportBtn').addEventListener('click', exportToJSON);
+        }
+
+        // Filter and sort products based on current filters
+        function filterAndSortProducts() {
+            const searchQuery = document.getElementById('searchBar').value.toLowerCase();
+            const selectedCategory = document.getElementById('categoryFilter').value;
+            const [sortField, sortOrder] = document.getElementById('sortOptions').value.split('_');
+
+            // Apply filters
+            filteredProducts = allProducts.filter(product => {
+                const matchesSearch = 
+                    product.title.toLowerCase().includes(searchQuery) ||
+                    product.sku.toLowerCase().includes(searchQuery) ||
+                    product.price.toLowerCase().includes(searchQuery) ||
+                    product.categories.some(cat => cat.name.toLowerCase().includes(searchQuery));
+
+                const matchesCategory = 
+                    selectedCategory === 'all' || 
+                    product.categories.some(cat => cat.name === selectedCategory);
+
+                return matchesSearch && matchesCategory;
+            });
+
+            // Apply sorting
+            filteredProducts.sort((a, b) => {
+                let comparison = 0;
+                
+                if (sortField === 'title') {
+                    comparison = a.title.localeCompare(b.title);
+                } else if (sortField === 'price') {
+                    const priceA = parseFloat(a.price.replace(/[^\d.]/g, ''));
+                    const priceB = parseFloat(b.price.replace(/[^\d.]/g, ''));
+                    comparison = priceA - priceB;
+                }
+
+                return sortOrder === 'desc' ? -comparison : comparison;
+            });
+
+            // Reset to first page
+            currentPage = 1;
+            totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+            updatePagination();
+            displayCurrentPage();
+            updateProductCount();
+        }
+
+        // Display the current page of products
+        function displayCurrentPage() {
+            const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
+            const end = start + PRODUCTS_PER_PAGE;
+            const productsToDisplay = filteredProducts.slice(start, end);
+
+            const container = document.getElementById('product-container');
+            container.innerHTML = productsToDisplay.map(product => `
                 <div class="product">
                     <h2>${product.title}</h2>
                     <p><strong>SKU:</strong> ${product.sku}</p>
                     <p class="price"><strong>Price:</strong> ${product.price}</p>
-                    <a href="${product.url}" target="_blank">
-                        <img class="product-image" src="${product.image_url}" alt="${product.title}">
+                    <a href="${product.url}" target="_blank" rel="noopener noreferrer">
+                        <img class="product-image" 
+                             src="${getProxiedImageUrl(product.image_url)}" 
+                             alt="${product.title}"
+                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+SW1hZ2UgTm90IEF2YWlsYWJsZTwvdGV4dD48L3N2Zz4='">
                     </a>
-                    <p>
+                    <div class="categories">
                         ${product.categories.map(cat => `
-                            <a href="${cat.url}" target="_blank">${cat.name}</a>
-                            <button class="category-copy-btn" 
-                                onclick="copyCategoryUrl('${cat.url}', '${product.price}')">
-                                Copy
-                            </button><br> 
-                        `).join("")}
-                    </p>
-                    <button class="copy-button" onclick="copyToClipboard(this)">Copy Product Details</button>
+                            <div style="margin: 5px 0;">
+                                <a href="${cat.url}" target="_blank" rel="noopener noreferrer">${cat.name}</a>
+                                <button class="category-copy-btn" 
+                                    onclick="copyCategoryUrl('${cat.url}', '${product.price}')">
+                                    Copy
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="copy-button" onclick="copyToClipboard(this)">
+                        Copy Product Details
+                    </button>
                 </div>
-            `).join("");
+            `).join('');
+
+            updatePagination();
         }
 
-        // Search products
-        document.getElementById("searchBar").addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            const products = document.querySelectorAll(".product");
-            products.forEach(product => {
-                const title = product.querySelector("h2").textContent.toLowerCase();
-                const sku = product.querySelector("p").textContent.toLowerCase();
-                const categories = product.querySelector(".categories")?.textContent.toLowerCase() || "";
-                const price = product.querySelector(".price").textContent.toLowerCase();
+        // Get proxied image URL to avoid CORS issues
+        function getProxiedImageUrl(originalUrl) {
+            if (!originalUrl || originalUrl === 'N/A') {
+                return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+            }
+            
+            // If the image is from the same origin, don't use proxy
+            if (originalUrl.startsWith(window.location.origin) || 
+                originalUrl.startsWith('/') || 
+                originalUrl.startsWith('./')) {
+                return originalUrl;
+            }
+            
+            // Use proxy for external images
+            return CORS_PROXY + originalUrl;
+        }
 
-                if (title.includes(query) || sku.includes(query) || categories.includes(query) || price.includes(query)) {
-                    product.style.display = "block";
-                } else {
-                    product.style.display = "none";
-                }
+        // Build the category filter dropdown
+        function buildCategoryFilter() {
+            const select = document.getElementById('categoryFilter');
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                select.appendChild(option);
             });
-        });
+        }
+
+        // Update pagination controls
+        function updatePagination() {
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage <= 1;
+            document.getElementById('nextPage').disabled = currentPage >= totalPages;
+        }
+
+        // Update product count display
+        function updateProductCount() {
+            const count = filteredProducts.length;
+            document.getElementById('product-count').textContent = 
+                `Showing ${count} product${count !== 1 ? 's' : ''} (${allProducts.length} total)`;
+        }
+
+        // Format price with thousands separators
+        function formatPrice(price) {
+            if (price === 'Out of Stock') return price;
+            const numericValue = price.replace(/[^\d.]/g, '');
+            if (!numericValue) return price;
+            return `${numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",")} TK`;
+        }
 
         // Copy product details to clipboard
         function copyToClipboard(button) {
-            const product = button.closest(".product");
-            const price = product.querySelector(".price").textContent.trim();
-            const url = product.querySelector("a").href;
+            const product = button.closest('.product');
+            const title = product.querySelector('h2').textContent;
+            const price = product.querySelector('.price').textContent;
+            const url = product.querySelector('a').href;
 
-            const textToCopy = `${price}\nURL: ${url}`;
+            const textToCopy = `${title}\n${price}\nURL: ${url}`;
 
             navigator.clipboard.writeText(textToCopy).then(() => {
-                showCopyNotification("Product details copied!");
+                showNotification('Product details copied!');
             }).catch((error) => {
-                console.error("Failed to copy:", error);
-                showCopyNotification("Failed to copy.", true);
+                console.error('Failed to copy:', error);
+                showNotification('Failed to copy.', true);
             });
         }
 
@@ -269,27 +527,39 @@
         function copyCategoryUrl(url, price) {
             const textToCopy = `${price}\nCategory URL: ${url}`;
             navigator.clipboard.writeText(textToCopy).then(() => {
-                showCopyNotification("Price & Category URL copied!");
+                showNotification('Price & Category URL copied!');
             }).catch((error) => {
-                console.error("Failed to copy:", error);
-                showCopyNotification("Failed to copy.", true);
+                console.error('Failed to copy:', error);
+                showNotification('Failed to copy.', true);
             });
         }
 
-        // Show copy notification
-        function showCopyNotification(message = "Copy Successful!", isError = false) {
-            const notification = document.getElementById("copy-notification");
-            notification.textContent = message;
-            notification.style.backgroundColor = isError ? "#ff4444" : "#4CAF50";
-            notification.classList.add("show");
-
-            setTimeout(() => {
-                notification.classList.remove("show");
-            }, 1000);
+        // Export products to JSON
+        function exportToJSON() {
+            const dataStr = JSON.stringify(filteredProducts, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `products-${new Date().toISOString().slice(0,10)}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('Export started!');
         }
 
-        // Load products on page load
-        fetchProducts();
+        // Show notification
+        function showNotification(message = 'Success!', isError = false) {
+            const notification = document.getElementById('copy-notification');
+            notification.textContent = message;
+            notification.style.backgroundColor = isError ? 'var(--danger-color)' : 'var(--success-color)';
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
     </script>
 </body>
 </html>
