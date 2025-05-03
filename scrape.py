@@ -6,6 +6,7 @@ import re
 import json
 import datetime
 import sqlite3
+from urllib.parse import urlparse
 
 # Get the current date and time
 scraped_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -13,6 +14,10 @@ scraped_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 # File paths
 urls_file = "url.txt"  # File containing URLs to scrape
 db_file = "scraped_data.db"  # SQLite database file
+images_dir = "product_images"  # Directory to store downloaded images
+
+# Create images directory if it doesn't exist
+os.makedirs(images_dir, exist_ok=True)
 
 # User-Agent header to avoid getting blocked
 headers = {
@@ -34,6 +39,7 @@ def initialize_db():
             sku TEXT NOT NULL,
             price TEXT NOT NULL,
             image_url TEXT NOT NULL,
+            local_image_path TEXT,
             url TEXT NOT NULL UNIQUE,
             categories TEXT,
             scraped_date TEXT NOT NULL
@@ -54,6 +60,44 @@ def load_existing_urls():
         conn.close()
     print(f"Loaded {len(scraped_urls)} existing URLs from the database")
 
+# Function to download and save an image
+async def download_image(session, image_url, sku):
+    if not image_url or image_url == "N/A":
+        return None
+        
+    try:
+        # Clean the SKU to create a valid filename
+        clean_sku = re.sub(r'[^\w\-_]', '_', sku)
+        
+        # Get the file extension from the URL
+        parsed_url = urlparse(image_url)
+        path = parsed_url.path
+        ext = os.path.splitext(path)[1]
+        
+        # If no extension or query parameters, try to get content type
+        if not ext or '?' in ext:
+            ext = '.jpg'  # default to jpg if we can't determine
+        
+        filename = f"{clean_sku}{ext}"
+        filepath = os.path.join(images_dir, filename)
+        
+        # Skip if file already exists
+        if os.path.exists(filepath):
+            return filepath
+            
+        async with session.get(image_url, headers=headers) as response:
+            if response.status == 200:
+                with open(filepath, 'wb') as f:
+                    while True:
+                        chunk = await response.content.read(1024)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                return filepath
+    except Exception as e:
+        print(f"❌ Error downloading image {image_url}: {e}")
+        return None
+
 # Function to insert new product data into the database
 def insert_product(product_data):
     conn = sqlite3.connect(db_file)
@@ -62,13 +106,14 @@ def insert_product(product_data):
     categories_json = json.dumps(product_data["categories"])
     # Insert the product data into the database
     cursor.execute('''
-        INSERT INTO products (title, sku, price, image_url, url, categories, scraped_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (title, sku, price, image_url, local_image_path, url, categories, scraped_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         product_data["title"],
         product_data["sku"],
         product_data["price"],
         product_data["image_url"],
+        product_data["local_image_path"],
         product_data["url"],
         categories_json,
         scraped_date
@@ -78,79 +123,83 @@ def insert_product(product_data):
 
 # Function to scrape a single product page
 async def fetch_product(session, url):
-        if url in scraped_urls:
-            print(f"⏩ Skipping already scraped URL: {url}")
-            return
+    if url in scraped_urls:
+        print(f"⏩ Skipping already scraped URL: {url}")
+        return
 
-        try:
-            async with session.get(url, headers=headers, timeout=30) as response:
-                if response.status == 200:
-                    html = await response.text()
-                    soup = BeautifulSoup(html, "lxml")  # Use lxml for faster parsing
+    try:
+        async with session.get(url, headers=headers, timeout=30) as response:
+            if response.status == 200:
+                html = await response.text()
+                soup = BeautifulSoup(html, "lxml")  # Use lxml for faster parsing
 
-                    # Extract Product Title
-                    title = soup.find("h1", class_="product_title")
-                    title = title.text.strip() if title else "N/A"
+                # Extract Product Title
+                title = soup.find("h1", class_="product_title")
+                title = title.text.strip() if title else "N/A"
 
-                    # Extract SKU
-                    sku = soup.find("span", class_="sku")
-                    sku = sku.text.strip() if sku else "N/A"
+                # Extract SKU
+                sku = soup.find("span", class_="sku")
+                sku = sku.text.strip() if sku else "N/A"
 
-                    # Check if the product is out of stock
-                    out_of_stock_message = soup.find(text="This product is currently out of stock and unavailable.")
-                    if out_of_stock_message:
-                        price = "Out of Stock"
-                    else:
-                        # Extract Price if the product is in stock
-                        price = soup.select_one(".price bdi")
-                        price = price.text.strip() if price else "N/A"
-                        price = re.sub(r'[^\d.]', '', price)  # Clean price (remove currency symbols)
-
-                    # Extract Product Image URL
-                    image_url = "N/A"
-                    img_tag = soup.find("img", class_="zoomImg")
-                    if img_tag and "src" in img_tag.attrs:
-                        image_url = img_tag["src"]
-
-                    if image_url == "N/A":
-                        all_images = soup.find_all("img")
-                        for img in all_images:
-                            if "uploads" in img.get("src", "") and "logo" not in img.get("src", ""):
-                                image_url = img["src"]
-                                break
-
-                    # Extract Categories
-                    categories = []
-                    categories_span = soup.find("span", class_="posted_in")
-                    if categories_span:
-                        for a_tag in categories_span.find_all("a", href=True):
-                            categories.append({
-                                "name": a_tag.text.strip(),
-                                "url": a_tag["href"]
-                            })
-
-                    # Generate product data
-                    product_data = {
-                        "title": title,
-                        "sku": sku,
-                        "price": f"{price}TK",
-                        "image_url": image_url,
-                        "url": url,
-                        "categories": categories,  # Always include categories, even if empty
-                    }
-
-                    # Insert the product data into the database
-                    insert_product(product_data)
-
-                    # Add the URL to the scraped set
-                    scraped_urls.add(url)
-                    print(f"✅ Scraped: {title}")
-
+                # Check if the product is out of stock
+                out_of_stock_message = soup.find(text="This product is currently out of stock and unavailable.")
+                if out_of_stock_message:
+                    price = "Out of Stock"
                 else:
-                    print(f"❌ Failed to fetch {url} (Status: {response.status})")
+                    # Extract Price if the product is in stock
+                    price = soup.select_one(".price bdi")
+                    price = price.text.strip() if price else "N/A"
+                    price = re.sub(r'[^\d.]', '', price)  # Clean price (remove currency symbols)
 
-        except Exception as e:
-            print(f"❌ Error fetching {url}: {e}")
+                # Extract Product Image URL
+                image_url = "N/A"
+                img_tag = soup.find("img", class_="zoomImg")
+                if img_tag and "src" in img_tag.attrs:
+                    image_url = img_tag["src"]
+
+                if image_url == "N/A":
+                    all_images = soup.find_all("img")
+                    for img in all_images:
+                        if "uploads" in img.get("src", "") and "logo" not in img.get("src", ""):
+                            image_url = img["src"]
+                            break
+
+                # Download the image
+                local_image_path = await download_image(session, image_url, sku) if image_url != "N/A" else None
+
+                # Extract Categories
+                categories = []
+                categories_span = soup.find("span", class_="posted_in")
+                if categories_span:
+                    for a_tag in categories_span.find_all("a", href=True):
+                        categories.append({
+                            "name": a_tag.text.strip(),
+                            "url": a_tag["href"]
+                        })
+
+                # Generate product data
+                product_data = {
+                    "title": title,
+                    "sku": sku,
+                    "price": f"{price}TK",
+                    "image_url": image_url,
+                    "local_image_path": local_image_path,
+                    "url": url,
+                    "categories": categories,  # Always include categories, even if empty
+                }
+
+                # Insert the product data into the database
+                insert_product(product_data)
+
+                # Add the URL to the scraped set
+                scraped_urls.add(url)
+                print(f"✅ Scraped: {title}")
+
+            else:
+                print(f"❌ Failed to fetch {url} (Status: {response.status})")
+
+    except Exception as e:
+        print(f"❌ Error fetching {url}: {e}")
 
 # Main function to scrape all URLs
 async def main():
