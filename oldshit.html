@@ -5,12 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scraped Products</title>
     <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+
         body {
             font-family: 'Arial', sans-serif;
             background-color: #f9f9f9;
             color: #333;
             margin: 0;
             padding: 20px;
+        }
+
+        #header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: 10px 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
 
         #searchBar {
@@ -20,27 +40,29 @@
             font-size: 16px;
             border: 2px solid #ddd;
             border-radius: 8px;
-            margin: 0 auto 20px;
+            margin: 0 auto;
             display: block;
             box-sizing: border-box;
-            position: fixed;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
         }
 
         #searchBar:focus {
-            border-color: #007bff;
+            border-color: var(--primary-color);
             outline: none;
+        }
+
+        #product-count {
+            font-weight: bold;
+            color: var(--dark-color);
+            text-align: center;
+            margin: 10px 0;
         }
 
         #product-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
             padding: 20px;
-            margin-top: 80px; /* Space for fixed search bar */
+            margin-top: 80px;
         }
 
         .product {
@@ -50,71 +72,108 @@
             padding: 20px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
 
         .product h2 {
-            font-size: 12px;
-            width: fit-content;
+            font-size: 16px;
             margin: 0 0 10px;
-            color: #222;
+            color: var(--dark-color);
+            line-height: 1.3;
         }
 
         .product p {
             margin: 5px 0;
-            font-size: 10px;
-            color: #555;
+            font-size: 14px;
+            color: var(--secondary-color);
         }
 
         .product .sku, .product .price {
             font-weight: bold;
-            color: #007bff;
+            color: var(--primary-color);
+        }
+
+        .product .price {
+            font-size: 18px;
+            color: var(--success-color);
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            padding-top: 100%; /* 1:1 Aspect Ratio */
+            margin: 10px 0;
+            overflow: hidden;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            cursor: pointer;
         }
 
         .product-image {
-            width: 90%;
-            height: auto;
-            border-radius: 8px;
-            margin-top: 10px;
-			left: 50%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
-        a {
-            text-decoration: none;
-            color: blue;
-            font-weight: bold;
-            font-family: Arial, sans-serif;
-            font-size: 10px;
+        .categories {
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .category {
+            background-color: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--dark-color);
+        }
+
+        .buttons {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .copy-button {
-            background-color: #007bff;
+            background-color: var(--primary-color);
             color: #fff;
             border: none;
-            padding: 10px 15px;
+            padding: 10px;
             font-size: 14px;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 15px;
-            width: 100%;
             transition: background-color 0.3s ease;
         }
 
         .copy-button:hover {
-            background-color: #0056b3;
+            background-color: #0069d9;
         }
 
         .category-copy-btn {
-            background-color: #007BFF;
+            background-color: var(--secondary-color);
             color: white;
             font-size: 12px;
             border: none;
             border-radius: 5px;
+            padding: 5px 8px;
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
 
         .category-copy-btn:hover {
-            background-color: #218838;
+            background-color: #5a6268;
         }
 
         #copy-notification {
@@ -122,28 +181,38 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: #4CAF50;
+            background-color: var(--success-color);
             color: white;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border-radius: 5px;
             display: none;
             z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         #copy-notification.show {
             display: block;
+            animation: fadeInOut 2.5s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
         }
 
         #loading {
             text-align: center;
             font-size: 18px;
-            margin-top: 20px;
+            margin: 50px 0;
             display: none;
         }
 
         @media (max-width: 768px) {
             #product-container {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                margin-top: 100px;
             }
         }
 
@@ -153,112 +222,261 @@
             }
         }
     </style>
-<link rel="icon" href="/favicon.ico" type="image/png">
+    <link rel="icon" href="/favicon.ico" type="image/png">
 </head>
 <body>
+    <div id="header">
+        <input type="text" id="searchBar" placeholder="Search products by title or SKU..." aria-label="Search products">
+        <div id="product-count">Loading products...</div>
+    </div>
 
-    <input type="text" id="searchBar" placeholder="Search products by title, SKU, or category...">
     <div id="loading">Loading products...</div>
+    
     <div id="product-container"></div>
+
     <div id="copy-notification"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script>
-        // Load the SQLite database file
+        // Configuration
+        const config = {
+            supportedImageFormats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'],
+            placeholderImage: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+',
+            cacheTTL: 24 * 60 * 60 * 1000 // 24 hours cache
+        };
+
+        // State management
+        let state = {
+            allProducts: [],
+            filteredProducts: [],
+            searchQuery: '',
+            imageCache: {}
+        };
+
+        // DOM elements
+        const elements = {
+            productContainer: document.getElementById('product-container'),
+            searchBar: document.getElementById('searchBar'),
+            productCount: document.getElementById('product-count'),
+            loading: document.getElementById('loading'),
+            copyNotification: document.getElementById('copy-notification')
+        };
+
+        // Initialize the application
+        async function init() {
+            showLoading(true);
+            await loadProducts();
+            setupEventListeners();
+            preloadImages();
+            renderProducts();
+            showLoading(false);
+        }
+
+        // Load products from SQLite database
+        async function loadProducts() {
+            try {
+                // Check cache first
+                const cachedData = localStorage.getItem('productsCache');
+                const cacheTime = localStorage.getItem('productsCacheTime');
+                
+                if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < config.cacheTTL) {
+                    state.allProducts = JSON.parse(cachedData);
+                    updateFilteredProducts();
+                    return;
+                }
+
+                // Load fresh data if no cache
+                const db = await loadDatabase();
+                if (!db) return;
+
+                const query = "SELECT * FROM products";
+                const results = db.exec(query);
+
+                if (results.length > 0) {
+                    state.allProducts = results[0].values.map(row => ({
+                        id: row[0],
+                        title: row[1],
+                        sku: row[2],
+                        price: row[3],
+                        image_url: row[4],
+                        local_image_path: row[5],
+                        url: row[6],
+                        categories: JSON.parse(row[7]),
+                        scraped_date: row[8]
+                    }));
+
+                    // Save to cache
+                    localStorage.setItem('productsCache', JSON.stringify(state.allProducts));
+                    localStorage.setItem('productsCacheTime', Date.now().toString());
+
+                    updateFilteredProducts();
+                }
+            } catch (error) {
+                console.error("Error loading products:", error);
+                showNotification("Failed to load products", true);
+            }
+        }
+
+        // Preload all images
+        function preloadImages() {
+            state.allProducts.forEach(product => {
+                const imgUrl = getEffectiveImageUrl(product);
+                if (imgUrl && !state.imageCache[imgUrl]) {
+                    const img = new Image();
+                    img.src = imgUrl;
+                    state.imageCache[imgUrl] = true;
+                }
+            });
+        }
+
+        // Determine the best image URL to use
+        function getEffectiveImageUrl(product) {
+            // Check local path first
+            if (product.local_image_path && fileExists(product.local_image_path)) {
+                return product.local_image_path;
+            }
+
+            // Check remote URL
+            if (product.image_url && isValidImageUrl(product.image_url)) {
+                return product.image_url;
+            }
+
+            // Return placeholder if no valid image
+            return config.placeholderImage;
+        }
+
+        // Check if a file exists (simplified for web environment)
+        function fileExists(path) {
+            return path && !path.includes('N/A') && !path.includes('null');
+        }
+
+        // Validate image URL format
+        function isValidImageUrl(url) {
+            if (!url || url === 'N/A') return false;
+            
+            const extension = url.split('.').pop().toLowerCase().split('?')[0];
+            return config.supportedImageFormats.includes(extension);
+        }
+
+        // Load SQLite database
         async function loadDatabase() {
             try {
                 const response = await fetch("scraped_data.db");
-                if (!response.ok) throw new Error("Failed to load database");
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const arrayBuffer = await response.arrayBuffer();
                 const SQL = await initSqlJs({
                     locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
                 });
-                const db = new SQL.Database(new Uint8Array(arrayBuffer));
-                return db;
+                return new SQL.Database(new Uint8Array(arrayBuffer));
             } catch (error) {
                 console.error("Error loading database:", error);
-                alert("Failed to load the database. Please try again later.");
+                showNotification("Failed to load database", true);
+                return null;
             }
         }
 
-        // Fetch and display products
-        async function fetchProducts() {
-            document.getElementById("loading").style.display = "block";
-            const db = await loadDatabase();
-            const query = "SELECT * FROM products";
-            const results = db.exec(query);
-            document.getElementById("loading").style.display = "none";
-
-            if (results.length > 0) {
-                const products = results[0].values.map(row => ({
-                    id: row[0],
-                    title: row[1],
-                    sku: row[2],
-                    price: row[3],
-                    image_url: row[4],
-                    url: row[5],
-                    categories: JSON.parse(row[6])
-                }));
-                displayProducts(products);
-            }
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search input with debounce for better performance
+            let searchTimeout;
+            elements.searchBar.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    state.searchQuery = e.target.value.toLowerCase().trim();
+                    updateFilteredProducts();
+                    renderProducts();
+                }, 100);
+            });
         }
 
-        // Display products in the HTML
-        function displayProducts(products) {
-            const container = document.getElementById("product-container");
-            container.innerHTML = products.map(product => `
+        // Update filtered products based on search
+        function updateFilteredProducts() {
+            if (!state.searchQuery) {
+                state.filteredProducts = [...state.allProducts];
+            } else {
+                // Search only in title and SKU (case insensitive)
+                const query = state.searchQuery.toLowerCase();
+                state.filteredProducts = state.allProducts.filter(product => {
+                    return product.title.toLowerCase().includes(query) || 
+                           product.sku.toLowerCase().includes(query);
+                });
+            }
+            updateProductCount();
+        }
+
+        // Render products to the DOM
+        function renderProducts() {
+            elements.productContainer.innerHTML = state.filteredProducts.map(product => `
                 <div class="product">
                     <h2>${product.title}</h2>
-                    <p><strong>SKU:</strong> ${product.sku}</p>
-                    <p class="price"><strong>Price:</strong> ${product.price}</p>
-                    <a href="${product.url}" target="_blank">
-                        <img class="product-image" src="${product.image_url}" alt="${product.title}">
-                    </a>
-                    <p>
+                    <p><strong>SKU:</strong> <span class="sku">${product.sku}</span></p>
+                    <p><strong>Price:</strong> <span class="price">${product.price}</span></p>
+                    
+                    <div class="image-container" onclick="window.open('${product.url}', '_blank')">
+                        <img class="product-image" 
+                             src="${getEffectiveImageUrl(product)}" 
+                             alt="${product.title}"
+                             onerror="this.onerror=null;this.src='${config.placeholderImage}'">
+                    </div>
+                    
+                    ${product.categories && product.categories.length > 0 ? `
+                    <div class="categories">
                         ${product.categories.map(cat => `
-                            <a href="${cat.url}" target="_blank">${cat.name}</a>
-                            <button class="category-copy-btn" 
-                                onclick="copyCategoryUrl('${cat.url}', '${product.price}')">
-                                Copy
-                            </button><br> 
-                        `).join("")}
-                    </p>
-                    <button class="copy-button" onclick="copyToClipboard(this)">Copy Product Details</button>
+                            <div class="category">
+                                ${cat.name}
+                                <button class="category-copy-btn" 
+                                    onclick="copyCategoryUrl('${escapeHtml(cat.url)}', '${escapeHtml(product.price)}')">
+                                    Copy URL
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ` : ''}
+                    
+                    <button class="copy-button" onclick="copyProductDetails(this)">
+                        Copy Product Details
+                    </button>
                 </div>
-            `).join("");
+            `).join('');
         }
 
-        // Search products
-        document.getElementById("searchBar").addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            const products = document.querySelectorAll(".product");
-            products.forEach(product => {
-                const title = product.querySelector("h2").textContent.toLowerCase();
-                const sku = product.querySelector("p").textContent.toLowerCase();
-                const categories = product.querySelector(".categories")?.textContent.toLowerCase() || "";
-                const price = product.querySelector(".price").textContent.toLowerCase();
+        // Update product count display
+        function updateProductCount() {
+            const total = state.filteredProducts.length;
+            elements.productCount.textContent = `Showing ${total} products`;
+        }
 
-                if (title.includes(query) || sku.includes(query) || categories.includes(query) || price.includes(query)) {
-                    product.style.display = "block";
-                } else {
-                    product.style.display = "none";
-                }
-            });
-        });
+        // Show/hide loading indicator
+        function showLoading(show) {
+            elements.loading.style.display = show ? 'block' : 'none';
+        }
+
+        // Show notification
+        function showNotification(message, isError = false) {
+            elements.copyNotification.textContent = message;
+            elements.copyNotification.style.backgroundColor = isError ? 'var(--danger-color)' : 'var(--success-color)';
+            elements.copyNotification.classList.add('show');
+
+            setTimeout(() => {
+                elements.copyNotification.classList.remove('show');
+            }, 3000);
+        }
 
         // Copy product details to clipboard
-        function copyToClipboard(button) {
-            const product = button.closest(".product");
-            const price = product.querySelector(".price").textContent.trim();
-            const url = product.querySelector("a").href;
+        function copyProductDetails(button) {
+            const product = button.closest('.product');
+            const title = product.querySelector('h2').textContent;
+            const sku = product.querySelector('.sku').textContent;
+            const price = product.querySelector('.price').textContent;
+            const url = product.querySelector('.image-container').getAttribute('onclick').match(/'([^']+)'/)[1];
 
-            const textToCopy = `${price}\nURL: ${url}`;
+            const textToCopy = `${title}\nSKU: ${sku}\n${price}\nURL: ${url}`;
 
             navigator.clipboard.writeText(textToCopy).then(() => {
-                showCopyNotification("Product details copied!");
-            }).catch((error) => {
-                console.error("Failed to copy:", error);
-                showCopyNotification("Failed to copy.", true);
+                showNotification('Product details copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showNotification('Failed to copy details', true);
             });
         }
 
@@ -266,27 +484,29 @@
         function copyCategoryUrl(url, price) {
             const textToCopy = `${price}\nCategory URL: ${url}`;
             navigator.clipboard.writeText(textToCopy).then(() => {
-                showCopyNotification("Price & Category URL copied!");
-            }).catch((error) => {
-                console.error("Failed to copy:", error);
-                showCopyNotification("Failed to copy.", true);
+                showNotification('Price & category URL copied!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showNotification('Failed to copy URL', true);
             });
         }
 
-        // Show copy notification
-        function showCopyNotification(message = "Copy Successful!", isError = false) {
-            const notification = document.getElementById("copy-notification");
-            notification.textContent = message;
-            notification.style.backgroundColor = isError ? "#ff4444" : "#4CAF50";
-            notification.classList.add("show");
-
-            setTimeout(() => {
-                notification.classList.remove("show");
-            }, 1000);
+        // Helper to escape HTML for safe insertion
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
-        // Load products on page load
-        fetchProducts();
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Expose functions to global scope for HTML onclick handlers
+        window.copyProductDetails = copyProductDetails;
+        window.copyCategoryUrl = copyCategoryUrl;
     </script>
 </body>
 </html>
