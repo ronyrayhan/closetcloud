@@ -29,29 +29,29 @@
             padding: 20px;
         }
         
-        #product-count {
-            text-align: center;
-            font-size: 14px;
-            color: var(--secondary-color);
-            margin-bottom: 60px;
-            padding-top: 10px;
-        }
-        
-        #searchBar {
-            width: 100%;
-            max-width: 600px;
-            padding: 14px 20px;
-            font-size: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 30px;
-            margin: 0 auto 20px;
-            display: block;
-            box-sizing: border-box;
+        .controls {
             position: fixed;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
             z-index: 1000;
+            background: rgba(245, 245, 245, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        #searchBar {
+            flex: 1;
+            min-width: 200px;
+            padding: 14px 20px;
+            font-size: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
         }
@@ -60,6 +60,32 @@
             border-color: var(--accent-color);
             outline: none;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+        
+        .per-page-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .per-page-selector label {
+            font-size: 14px;
+            color: var(--secondary-color);
+        }
+        
+        .per-page-selector select {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: white;
+            cursor: pointer;
+        }
+        
+        #product-count {
+            text-align: center;
+            font-size: 14px;
+            color: var(--secondary-color);
+            margin: 80px 0 20px;
         }
         
         #loading {
@@ -75,10 +101,9 @@
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 25px;
             padding: 20px;
-            margin-top: 80px;
+            margin-top: 60px;
         }
         
-        /* Luxury Product Card Styles */
         .product {
             position: relative;
             background: white;
@@ -248,6 +273,52 @@
             animation: fadeInOut 2.5s ease-in-out;
         }
         
+        /* Pagination Styles */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .pagination {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .pagination button:hover {
+            background: var(--light-bg);
+        }
+        
+        .pagination button.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .items-per-page {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
         @keyframes fadeInOut {
             0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
             10% { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -260,9 +331,14 @@
                 grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             }
             
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+                padding: 15px;
+            }
+            
             #searchBar {
-                max-width: 90%;
-                padding: 12px 16px;
+                width: 100%;
             }
         }
         
@@ -274,19 +350,51 @@
             .action-buttons {
                 flex-direction: column;
             }
+            
+            .pagination-container {
+                flex-direction: column;
+                align-items: center;
+            }
         }
     </style>
     <link rel="icon" href="/favicon.ico" type="image/png">
 </head>
 <body>
+    <div class="controls">
+        <input type="text" id="searchBar" placeholder="Search products by title, SKU, or category... (Press Enter)">
+        <div class="per-page-selector">
+            <label for="perPage">Items per page:</label>
+            <select id="perPage">
+                <option value="12">12</option>
+                <option value="24">24</option>
+                <option value="36">36</option>
+                <option value="48">48</option>
+                <option value="60">60</option>
+            </select>
+        </div>
+    </div>
+    
     <div id="product-count">Loading products...</div>
-    <input type="text" id="searchBar" placeholder="Search products by title, SKU, or category...">
     <div id="loading">Loading products...</div>
     <div id="product-container"></div>
+    
+    <div class="pagination-container">
+        <div class="items-per-page">
+            Showing <span id="showing-count">0</span> of <span id="total-count">0</span> products
+        </div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+    
     <div id="copy-notification"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script>
+        // Global variables
+        let allProducts = [];
+        let filteredProducts = [];
+        let productsPerPage = 12;
+        let currentPage = 1;
+        
         // Load the SQLite database file
         async function loadDatabase() {
             try {      
@@ -304,7 +412,7 @@
             }
         }
 
-        // Fetch and display products
+        // Fetch products from database
         async function fetchProducts() {
             document.getElementById("loading").style.display = "block";
             const db = await loadDatabase();
@@ -313,7 +421,7 @@
             document.getElementById("loading").style.display = "none";
 
             if (results.length > 0) {
-                const products = results[0].values.map(row => ({
+                allProducts = results[0].values.map(row => ({
                     id: row[0],
                     title: row[1],
                     sku: row[2],
@@ -322,17 +430,22 @@
                     url: row[5],
                     categories: JSON.parse(row[6])
                 }));
-                displayProducts(products);
+                
+                filteredProducts = [...allProducts];
+                updateProductCount();
+                displayProducts();
+                setupPagination();
             }
         }
 
-        // Display products in the HTML
-        function displayProducts(products) {
+        // Display products with pagination
+        function displayProducts() {
             const container = document.getElementById("product-container");
-            const countDisplay = document.getElementById("product-count");
-            countDisplay.textContent = `Total Products: ${products.length}`;
+            const startIndex = (currentPage - 1) * productsPerPage;
+            const endIndex = startIndex + productsPerPage;
+            const productsToDisplay = filteredProducts.slice(startIndex, endIndex);
             
-            container.innerHTML = products.map(product => `
+            container.innerHTML = productsToDisplay.map(product => `
                 <div class="product">
                     <div class="product-image-container">
                         <a href="${product.url}" target="_blank">
@@ -375,27 +488,109 @@
                     </div>
                 </div>
             `).join("");
+            
+            updateShowingCount();
+        }
+
+        // Setup pagination buttons
+        function setupPagination() {
+            const paginationDiv = document.getElementById("pagination");
+            const pageCount = Math.ceil(filteredProducts.length / productsPerPage);
+            
+            paginationDiv.innerHTML = '';
+            
+            // Previous button
+            const prevButton = document.createElement('button');
+            prevButton.innerHTML = '&laquo;';
+            prevButton.disabled = currentPage === 1;
+            prevButton.addEventListener('click', () => {
+                currentPage--;
+                displayProducts();
+                setupPagination();
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            });
+            paginationDiv.appendChild(prevButton);
+            
+            // Page buttons
+            const maxVisibleButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisibleButtons / 2));
+            let endPage = Math.min(pageCount, startPage + maxVisibleButtons - 1);
+            
+            if (endPage - startPage + 1 < maxVisibleButtons) {
+                startPage = Math.max(1, endPage - maxVisibleButtons + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                pageButton.className = i === currentPage ? 'active' : '';
+                pageButton.addEventListener('click', () => {
+                    currentPage = i;
+                    displayProducts();
+                    setupPagination();
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                });
+                paginationDiv.appendChild(pageButton);
+            }
+            
+            // Next button
+            const nextButton = document.createElement('button');
+            nextButton.innerHTML = '&raquo;';
+            nextButton.disabled = currentPage === pageCount;
+            nextButton.addEventListener('click', () => {
+                currentPage++;
+                displayProducts();
+                setupPagination();
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            });
+            paginationDiv.appendChild(nextButton);
         }
 
         // Search products
-        document.getElementById("searchBar").addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            const products = document.querySelectorAll(".product");
-            
-            products.forEach(product => {
-                const title = product.querySelector("h2").textContent.toLowerCase();
-                const sku = product.querySelector(".sku").textContent.toLowerCase();
-                const categories = Array.from(product.querySelectorAll(".category-value a"))
-                                    .map(el => el.textContent.toLowerCase())
-                                    .join(" ");
-                const price = product.querySelector(".price").textContent.toLowerCase();
+function searchProducts(query) {
+    query = query.toLowerCase();
+    filteredProducts = allProducts.filter(product => {
+        const title = product.title.toLowerCase();
+        const sku = product.sku.toLowerCase();
 
-                if (title.includes(query) || sku.includes(query) || categories.includes(query) || price.includes(query)) {
-                    product.style.display = "block";
-                } else {
-                    product.style.display = "none";
-                }
-            });
+        return title.includes(query) || sku.includes(query);
+    });
+
+    currentPage = 1;
+    updateProductCount();
+    displayProducts();
+    setupPagination();
+}
+
+
+        // Update product count display
+        function updateProductCount() {
+            const countDisplay = document.getElementById("product-count");
+            countDisplay.textContent = `Found ${filteredProducts.length} products`;
+            document.getElementById("total-count").textContent = filteredProducts.length;
+            updateShowingCount();
+        }
+        
+        // Update showing count in pagination
+        function updateShowingCount() {
+            const start = (currentPage - 1) * productsPerPage + 1;
+            const end = Math.min(currentPage * productsPerPage, filteredProducts.length);
+            document.getElementById("showing-count").textContent = `${start}-${end}`;
+        }
+
+        // Handle Enter key press in search
+        document.getElementById("searchBar").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                searchProducts(e.target.value);
+            }
+        });
+        
+        // Handle items per page change
+        document.getElementById("perPage").addEventListener("change", (e) => {
+            productsPerPage = parseInt(e.target.value);
+            currentPage = 1;
+            displayProducts();
+            setupPagination();
         });
 
         // Copy product details to clipboard
@@ -437,8 +632,8 @@
             }, 2500);
         }
 
-        // Load products on page load
-        fetchProducts();
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', fetchProducts);
     </script>
 </body>
 </html>
