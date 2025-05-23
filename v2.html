@@ -602,7 +602,7 @@ function searchProducts(query) {
             const price = product.querySelector(".price").textContent.trim();
             const url = product.querySelector("a").href;
 
-            const textToCopy = `${price}\nURL: ${url}`;
+            const textToCopy = `Price: ${price}\nURL: ${url}`;
 
             navigator.clipboard.writeText(textToCopy).then(() => {
                 showCopyNotification("Product details copied!");
