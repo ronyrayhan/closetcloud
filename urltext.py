@@ -8,7 +8,8 @@ urls = [
     "https://www.closetcloud.xyz/wp-sitemap-posts-product-3.xml",
     "https://www.closetcloud.xyz/wp-sitemap-posts-product-4.xml",
     "https://www.closetcloud.xyz/wp-sitemap-posts-product-5.xml",
-    "https://www.closetcloud.xyz/wp-sitemap-posts-product-6.xml"
+    "https://www.closetcloud.xyz/wp-sitemap-posts-product-6.xml",
+    "https://www.closetcloud.xyz/wp-sitemap-posts-product-7.xml"
 ]
 
 # Namespace for WordPress sitemaps
