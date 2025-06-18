@@ -80,6 +80,20 @@
             background: white;
             cursor: pointer;
         }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--secondary-color);
+        }
+
+        .toggle-container input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
         
         #product-count {
             text-align: center;
@@ -409,6 +423,10 @@
                 <option value="400">400</option>
             </select>
         </div>
+        <div class="toggle-container">
+            <input type="checkbox" id="hidePlaceholders" checked>
+            <label for="hidePlaceholders">Hide Without Images</label>
+        </div>
     </div>
     
     <div id="product-count">Loading products...</div>
@@ -436,6 +454,7 @@
         let filteredProducts = [];
         let productsPerPage = 12;
         let currentPage = 1;
+        let hidePlaceholders = true;
         
         // Load the SQLite database file
         async function loadDatabase() {
@@ -472,6 +491,9 @@
                     url: row[5],
                     categories: JSON.parse(row[6])
                 }));
+                
+                // Set the initial state of the checkbox
+                document.getElementById("hidePlaceholders").checked = hidePlaceholders;
                 
                 filteredProducts = [...allProducts];
                 updateProductCount();
@@ -594,7 +616,11 @@
             filteredProducts = allProducts.filter(product => {
                 const title = product.title.toLowerCase();
                 const sku = product.sku.toLowerCase();
-
+                const isPlaceholder = product.image_url.includes('woocommerce-placeholder');
+                
+                // Skip if we're hiding placeholders and this is one
+                if (hidePlaceholders && isPlaceholder) return false;
+                
                 return title.includes(query) || sku.includes(query);
             });
 
@@ -632,6 +658,12 @@
             currentPage = 1;
             displayProducts();
             setupPagination();
+        });
+
+        // Handle placeholder toggle change
+        document.getElementById("hidePlaceholders").addEventListener("change", (e) => {
+            hidePlaceholders = e.target.checked;
+            searchProducts(document.getElementById("searchBar").value);
         });
 
         // Copy product details to clipboard
