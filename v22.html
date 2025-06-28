@@ -456,6 +456,34 @@
         let currentPage = 1;
         let hidePlaceholders = true;
         
+        // Helper function to safely parse categories
+        function parseCategories(categoriesData) {
+            try {
+                // If it's already an array, return it
+                if (Array.isArray(categoriesData)) return categoriesData;
+                
+                // If it's a string, try to parse it
+                if (typeof categoriesData === 'string') {
+                    // Handle case where string might be serialized multiple times
+                    let parsed = categoriesData;
+                    while (typeof parsed === 'string') {
+                        parsed = JSON.parse(parsed);
+                    }
+                    return Array.isArray(parsed) ? parsed : [];
+                }
+                
+                // If it's an object, wrap in array
+                if (typeof categoriesData === 'object' && categoriesData !== null) {
+                    return [categoriesData];
+                }
+                
+                return [];
+            } catch (e) {
+                console.error("Error parsing categories:", e);
+                return []; // Return empty array as fallback
+            }
+        }
+
         // Load the SQLite database file
         async function loadDatabase() {
             try {      
@@ -489,8 +517,11 @@
                     price: row[3],
                     image_url: row[4],
                     url: row[5],
-                    categories: JSON.parse(row[6])
+                    categories: parseCategories(row[6]) // Use our safe parser
                 }));
+                
+                // Debug: log first product's categories
+                console.log("First product categories:", allProducts[0]?.categories);
                 
                 // Set the initial state of the checkbox
                 document.getElementById("hidePlaceholders").checked = hidePlaceholders;
@@ -509,7 +540,11 @@
             const endIndex = startIndex + productsPerPage;
             const productsToDisplay = filteredProducts.slice(startIndex, endIndex);
             
-            container.innerHTML = productsToDisplay.map(product => `
+            container.innerHTML = productsToDisplay.map(product => {
+                // Safely handle categories
+                const categories = Array.isArray(product.categories) ? product.categories : [];
+                
+                return `
                 <div class="product">
                     <div class="product-image-container">
                         <a href="${product.url}" target="_blank">
@@ -526,12 +561,12 @@
                         </div>
                         
                         <div class="category-section">
-                            ${product.categories.map(cat => `
+                            ${categories.map((cat, index) => `
                                 <div class="category-item">
-                                    <span class="category-label">${cat === product.categories[0] ? 'Category:' : 'Collection:'}</span>
+                                    <span class="category-label">${index === 0 ? 'Category:' : 'Collection:'}</span>
                                     <div class="category-value">
-                                        <a href="${cat.url}" target="_blank">${cat.name}</a>
-                                        <button class="category-copy-btn" onclick="copyCategoryUrl('${cat.url}', '${product.price}')">
+                                        <a href="${cat.url || '#'}" target="_blank">${cat.name || 'N/A'}</a>
+                                        <button class="category-copy-btn" onclick="copyCategoryUrl('${cat.url || ''}', '${product.price}')">
                                             <svg class="copy-icon" viewBox="0 0 24 24">
                                                 <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
                                             </svg>
@@ -551,7 +586,8 @@
                         </div>
                     </div>
                 </div>
-            `).join("");
+                `;
+            }).join("");
             
             updateShowingCount();
         }
@@ -621,7 +657,16 @@
                 // Skip if we're hiding placeholders and this is one
                 if (hidePlaceholders && isPlaceholder) return false;
                 
-                return title.includes(query) || sku.includes(query);
+                // Check if query matches title or SKU
+                const matchesBasic = title.includes(query) || sku.includes(query);
+                
+                // Check if query matches any category name
+                const matchesCategory = Array.isArray(product.categories) && 
+                    product.categories.some(cat => 
+                        cat.name && cat.name.toLowerCase().includes(query)
+                    );
+                
+                return matchesBasic || matchesCategory;
             });
 
             currentPage = 1;

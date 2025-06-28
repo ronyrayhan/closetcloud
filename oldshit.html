@@ -75,7 +75,7 @@
             height: auto;
             border-radius: 8px;
             margin-top: 10px;
-			left: 50%;
+            left: 50%;
         }
 
         a {
@@ -153,10 +153,10 @@
             }
         }
     </style>
-<link rel="icon" href="/favicon.ico" type="image/png">
+    <link rel="icon" href="/favicon.ico" type="image/png">
 </head>
 <body>
-<div id="product-count">Loading products...</div>
+    <div id="product-count">Loading products...</div>
     <input type="text" id="searchBar" placeholder="Search products by title, SKU, or category...">
     <div id="loading">Loading products...</div>
     <div id="product-container"></div>
@@ -164,10 +164,24 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script>
+        // Store products globally for search functionality
+        let allProducts = [];
+        
+        // Helper function to safely parse categories
+        function tryParseCategories(categoriesData) {
+            try {
+                if (!categoriesData) return [];
+                const parsed = JSON.parse(categoriesData);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                console.error("Error parsing categories:", e);
+                return [];
+            }
+        }
+
         // Load the SQLite database file
         async function loadDatabase() {
             try {      
-
                 const response = await fetch("scraped_data.db");
                 if (!response.ok) throw new Error("Failed to load database");
                 const arrayBuffer = await response.arrayBuffer();
@@ -179,6 +193,7 @@
             } catch (error) {
                 console.error("Error loading database:", error);
                 alert("Failed to load the database. Please try again later.");
+                return null;
             }
         }
 
@@ -186,67 +201,97 @@
         async function fetchProducts() {
             document.getElementById("loading").style.display = "block";
             const db = await loadDatabase();
-            const query = "SELECT * FROM products";
-            const results = db.exec(query);
-            document.getElementById("loading").style.display = "none";
+            if (!db) {
+                document.getElementById("loading").style.display = "none";
+                return;
+            }
 
-            if (results.length > 0) {
-                const products = results[0].values.map(row => ({
-                    id: row[0],
-                    title: row[1],
-                    sku: row[2],
-                    price: row[3],
-                    image_url: row[4],
-                    url: row[5],
-                    categories: JSON.parse(row[6])
-                }));
-                displayProducts(products);
+            try {
+                const query = "SELECT * FROM products";
+                const results = db.exec(query);
+                document.getElementById("loading").style.display = "none";
+
+                if (results.length > 0) {
+                    allProducts = results[0].values.map(row => ({
+                        id: row[0],
+                        title: row[1],
+                        sku: row[2],
+                        price: row[3],
+                        image_url: row[4],
+                        url: row[5],
+                        categories: tryParseCategories(row[6])
+                    }));
+                    displayProducts(allProducts);
+                }
+            } catch (error) {
+                console.error("Error fetching products:", error);
+                document.getElementById("loading").style.display = "none";
+                alert("Error displaying products. Check console for details.");
             }
         }
 
         // Display products in the HTML
         function displayProducts(products) {
             const container = document.getElementById("product-container");
-			const countDisplay = document.getElementById("product-count");
-			countDisplay.textContent = `Total Products: ${products.length}`;
-            container.innerHTML = products.map(product => `
-                <div class="product">
-                    <h2>${product.title}</h2>
-                    <p><strong>SKU:</strong> ${product.sku}</p>
-                    <p class="price"><strong>Price:</strong> ${product.price}</p>
-                    <a href="${product.url}" target="_blank">
-                        <img class="product-image" src="${product.image_url}" alt="${product.title}">
-                    </a>
-                    <p>
-                        ${product.categories.map(cat => `
-                            <a href="${cat.url}" target="_blank">${cat.name}</a>
-                            <button class="category-copy-btn" 
-                                onclick="copyCategoryUrl('${cat.url}', '${product.price}')">
-                                Copy
-                            </button><br> 
-                        `).join("")}
-                    </p>
-                    <button class="copy-button" onclick="copyToClipboard(this)">Copy Product Details</button>
-                </div>
-            `).join("");
+            const countDisplay = document.getElementById("product-count");
+            countDisplay.textContent = `Total Products: ${products.length}`;
+            
+            container.innerHTML = products.map(product => {
+                // Ensure we have valid categories data
+                const categories = Array.isArray(product.categories) ? product.categories : [];
+                
+                return `
+                    <div class="product" data-title="${product.title.toLowerCase()}" 
+                         data-sku="${product.sku.toLowerCase()}" 
+                         data-price="${product.price.toLowerCase()}"
+                         data-categories="${categories.map(c => c.name).join(' ').toLowerCase()}">
+                        <h2>${product.title}</h2>
+                        <p><strong>SKU:</strong> ${product.sku}</p>
+                        <p class="price"><strong>Price:</strong> ${product.price}</p>
+                        <a href="${product.url}" target="_blank">
+                            <img class="product-image" src="${product.image_url}" alt="${product.title}">
+                        </a>
+                        <p>
+                            ${categories.map(cat => `
+                                <a href="${cat.url || '#'}" target="_blank">${cat.name || 'Unnamed Category'}</a>
+                                <button class="category-copy-btn" 
+                                    onclick="copyCategoryUrl('${cat.url || ''}', '${product.price}')">
+                                    Copy
+                                </button><br> 
+                            `).join("")}
+                        </p>
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy Product Details</button>
+                    </div>
+                `;
+            }).join("");
         }
 
         // Search products
-        document.getElementById("searchBar").addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            const products = document.querySelectorAll(".product");
-            products.forEach(product => {
-                const title = product.querySelector("h2").textContent.toLowerCase();
-                const sku = product.querySelector("p").textContent.toLowerCase();
-                const categories = product.querySelector(".categories")?.textContent.toLowerCase() || "";
-                const price = product.querySelector(".price").textContent.toLowerCase();
+        function searchProducts(query) {
+            if (!query) {
+                displayProducts(allProducts);
+                return;
+            }
 
-                if (title.includes(query) || sku.includes(query) || categories.includes(query) || price.includes(query)) {
-                    product.style.display = "block";
-                } else {
-                    product.style.display = "none";
-                }
+            const filteredProducts = allProducts.filter(product => {
+                const searchStr = query.toLowerCase();
+                const title = product.title.toLowerCase();
+                const sku = product.sku.toLowerCase();
+                const price = product.price.toLowerCase();
+                const categories = product.categories.map(c => c.name).join(' ').toLowerCase();
+
+                return title.includes(searchStr) || 
+                       sku.includes(searchStr) || 
+                       price.includes(searchStr) || 
+                       categories.includes(searchStr);
             });
+
+            displayProducts(filteredProducts);
+        }
+
+        // Setup search event listener
+        document.getElementById("searchBar").addEventListener("input", (e) => {
+            searchProducts(e.target.value);
         });
 
         // Copy product details to clipboard

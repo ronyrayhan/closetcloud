@@ -137,4 +137,4 @@ def api_delete_product(product_id):
 
 if __name__ == '__main__':
     initialize_db()
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
