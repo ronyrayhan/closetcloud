@@ -11,11 +11,23 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2rem;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .main-content {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            text-align: center;
+            padding: 2rem;
         }
 
         h1 {
@@ -26,7 +38,7 @@
             text-align: center;
             width: 100%;
             max-width: 300px;
-            animation: fadeIn 0.5s ease-out; /* Optional: fade in heading too */
+            animation: fadeIn 0.5s ease-out;
         }
 
         .button-container {
@@ -52,23 +64,23 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             width: 100%;
-            
-            /* Fade-in animation */
             opacity: 0;
             animation: fadeIn 0.6s ease-out forwards;
         }
 
-        /* Button colors (unchanged) */
+        /* Button colors */
         .button-1 { background-color: #4CAF50; }
         .button-2 { background-color: #2196F3; }
         .button-3 { background-color: #ff9800; }
         .button-4 { background-color: #9C27B0; }
+        .button-5 { background-color: #607d8b; }
 
-        /* Hover effects (unchanged) */
+        /* Hover effects */
         .button-1:hover { background-color: #3e8e41; }
         .button-2:hover { background-color: #0b7dda; }
         .button-3:hover { background-color: #e68a00; }
         .button-4:hover { background-color: #7B1FA2; }
+        .button-5:hover { background-color: #455a64; }
 
         /* Animation keyframes */
         @keyframes fadeIn {
@@ -87,19 +99,102 @@
         .button:nth-child(2) { animation-delay: 0.4s; }
         .button:nth-child(3) { animation-delay: 0.6s; }
         .button:nth-child(4) { animation-delay: 0.8s; }
+        .button:nth-child(5) { animation-delay: 1.0s; }
+
+        /* Changelog styles */
+        .changelog {
+            margin-top: 2rem;
+        }
+
+        .changelog h2 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .changelog-entry {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px dashed #ddd;
+        }
+
+        .changelog-date {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 0.3rem;
+        }
+
+        .changelog-items {
+            list-style-type: none;
+            padding-left: 1rem;
+        }
+
+        .changelog-items li {
+            margin-bottom: 0.5rem;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .changelog-items li:before {
+            content: "•";
+            color: #4CAF50;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .sidebar {
+                padding: 1rem;
+                max-height: 200px;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Holy Shit</h1>
-    <div class="button-container">
-        <a href="oldshit.html" target="_blank" rel="noopener noreferrer" class="button button-1">OLD SHIT</a>
-        <a href="newshit.html" target="_blank" rel="noopener noreferrer" class="button button-2">NEW SHIT</a>
-        <a href="site.html" target="_blank" rel="noopener noreferrer" class="button button-3">OLD CC Product</a>
-		 <a href="v2.html" target="_blank" rel="noopener noreferrer" class="button button-4">Version 2
-		 </a>
-		 <a href="v22.html" target="_blank" rel="noopener noreferrer" class="button button-4">Version 2 with Zoom
-		 </a>
-        <a href="http://192.168.0.143" target="_blank" rel="noopener noreferrer" class="button button-4">Live Catalogue</a>
+    <div class="sidebar">
+        <div class="changelog">
+            <h2>Changelog</h2>
+            
+            <div class="changelog-entry">
+                <div class="changelog-date">July 2, 2025</div>
+                <ul class="changelog-items">
+                    <li>Added changelog sidebar</li>
+                    <li>Improved responsive layout</li>
+                    <li>Fixed link for Live Catalogue(PC chalu thakte hobe)</li>
+                </ul>
+            </div>
+            
+            <div class="changelog-entry">
+                <div class="changelog-date">June 28, 2025</div>
+                <ul class="changelog-items">
+                    <li>Added Version 2 with Zoom(Shift+mouse click korle zoom hobe)</li>
+                    <li>Fixed animation timing</li>
+                </ul>
+            </div>          
+        </div>
+    </div>
+
+    <div class="main-content">
+        <h1>Holy Shit</h1>
+        <div class="button-container">
+            <a href="oldshit.html" target="_blank" rel="noopener noreferrer" class="button button-1">OLD SHIT</a>
+            <a href="newshit.html" target="_blank" rel="noopener noreferrer" class="button button-2">NEW SHIT</a>
+            <a href="site.html" target="_blank" rel="noopener noreferrer" class="button button-3">OLD CC Product</a>
+            <a href="v2.html" target="_blank" rel="noopener noreferrer" class="button button-4">Version 2</a>
+            <a href="v22.html" target="_blank" rel="noopener noreferrer" class="button button-4">Version 2 with Zoom</a>
+            <a href="http://192.168.10.252" target="_blank" rel="noopener noreferrer" class="button button-5">Live Catalogue</a>
+        </div>
     </div>
 </body>
 </html>
