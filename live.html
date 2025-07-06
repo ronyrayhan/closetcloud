@@ -3,280 +3,645 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catalogue Management</title>
-   <style>
+    <link rel="icon" href="https://cdn-icons-png.freepik.com/256/10254/10254268.png">
+    <title>Catalogue Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --danger-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f9f9f9;
-            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            background-color: #f8fafc;
+            color: #334155;
         }
 
+        /* Improved Search Header */
+        .search-header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            width: auto;
+            max-width: 90%;
+            gap: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Improved Search Buttons */
+        .quick-search-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .quick-search-buttons button {
+            background-color: #f1f5f9;
+            color: #334155;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .quick-search-buttons button:hover {
+            background-color: #e2e8f0;
+        }
+
+        .quick-search-buttons button i {
+            font-size: 12px;
+        }
+
+        /* Improved Search Input */
         #searchBar {
-            width: 100%;
-            max-width: 600px;
-            padding: 12px;
-            font-size: 16px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            margin: 0 auto 20px;
-            display: block;
-            box-sizing: border-box;
+            width: 0;
+            padding: 8px 0;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            outline: none;
+            transition: width 0.3s ease;
+            color: #334155;
         }
 
+        #searchBar.active {
+            width: 200px;
+            padding: 8px 12px;
+        }
+
+        #searchBar::placeholder {
+            color: #94a3b8;
+        }
+
+        #searchToggleBtn {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Loading State */
+        #loading {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            margin-top: 80px;
+        }
+
+        /* Catalogue Grid */
         #catalogue-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
             padding: 20px;
+            margin-top: 80px;
         }
 
         .catalogue {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
+            background-color: white;
+            border-radius: var(--border-radius);
             padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            border: 1px solid #e2e8f0;
         }
 
         .catalogue:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
         }
 
         .catalogue h2 {
             margin: 0 0 10px;
-            color: #222;
+            color: var(--dark-color);
+            font-size: 1.3rem;
         }
 
         .catalogue p {
-            margin: 5px 0;
-            color: #555;
+            margin: 8px 0;
+            color: #475569;
+            font-size: 0.95rem;
         }
 
-        .catalogue img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin-top: 10px;
+        .catalogue a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
         }
 
-        .primary-image {
-            border: 3px solid #007bff;
+        .catalogue a:hover {
+            text-decoration: underline;
         }
 
-        .secondary-images {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .secondary-images img {
-            width: 100%;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
+        /* Image Gallery */
+        .image-gallery {
             margin-top: 15px;
         }
 
-        .actions button {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            padding: 10px 15px;
+        .gallery-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .gallery-title i {
+            color: var(--primary-color);
             font-size: 14px;
-            border-radius: 5px;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .image-item {
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 1;
+            transition: var(--transition);
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            position: relative;
         }
 
-        .actions button:hover {
-            background-color: #0056b3;
-        }
-
-        .actions button.delete {
-            background-color: #ff4444;
-        }
-
-        .actions button.delete:hover {
-            background-color: #cc0000;
-        }
-
-        #add-catalogue-form {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #add-catalogue-form h2 {
-            margin-top: 0;
-        }
-
-        #add-catalogue-form label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        #add-catalogue-form input,
-        #add-catalogue-form textarea {
+        .image-item img {
             width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
-        .drop-zone {
-            border: 2px dashed #007bff;
-            border-radius: 10px;
-            padding: 20px;
+        .image-item:hover {
+            transform: scale(1.05);
+        }
+
+        /* Empty State */
+        .empty-state {
             text-align: center;
-            margin-bottom: 15px;
-            cursor: pointer;
+            padding: 50px 20px;
+            color: #64748b;
+            grid-column: 1 / -1;
         }
 
-        .drop-zone.dragover {
-            background-color: #f0f8ff;
+        .empty-state i {
+            font-size: 60px;
+            color: #e2e8f0;
+            margin-bottom: 20px;
         }
 
-        .drop-zone p {
-            margin: 0;
-            color: #555;
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--dark-color);
         }
 
-        .drop-zone img {
-            max-width: 100%;
-            max-height: 150px;
-            margin-top: 10px;
+        /* Image Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            overflow: auto;
         }
 
-        /* Style for the dropdown */
-        details {
-            margin-top: 10px;
+        .modal-content {
+            display: block;
+            margin: auto;
+            max-width: 90%;
+            max-height: 90%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
 
-        summary {
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 35px;
             font-weight: bold;
             cursor: pointer;
-            color: #007bff;
+            transition: var(--transition);
         }
 
-        summary:hover {
-            text-decoration: underline;
+        .close:hover {
+            color: #ddd;
         }
+
+        #caption {
+            margin: auto;
+            display: block;
+            width: 80%;
+            text-align: center;
+            color: #ccc;
+            padding: 10px 0;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            #catalogue-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-header {
+                flex-wrap: wrap;
+                justify-content: center;
+                padding: 8px;
+            }
+            
+            .quick-search-buttons {
+                width: 100%;
+                justify-content: center;
+                margin-top: 8px;
+                order: 2;
+            }
+            
+            .search-toggle-wrapper {
+                order: 1;
+            }
+            
+            #searchBar.active {
+                width: 160px;
+            }
+        }
+		/* Secondary Images Dropdown Styling */
+details {
+    margin-top: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+details[open] {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+summary {
+    background-color: #f8fafc;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: var(--primary-color);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+summary:hover {
+    background-color: #f1f5f9;
+    color: var(--secondary-color);
+}
+
+summary::before {
+    content: "▶";
+    display: inline-block;
+    margin-right: 10px;
+    font-size: 0.7rem;
+    transition: transform 0.2s ease;
+}
+
+details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+/* Add a plus/minus icon alternative */
+summary::after {
+    content: "+";
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+}
+
+details[open] summary::after {
+    content: "-";
+}
+
+/* Secondary images container */
+.secondary-images {
+    padding: 15px;
+    background-color: white;
+}
     </style>
 </head>
 <body>
-<input type="text" id="searchBar" placeholder="Search catalogues by name, artist, brand, or date (YYYY-MM-DD)...">    <div id="loading">Loading catalogues...</div>
+    <header>
+        <div class="search-header" id="searchHeader">
+            <div class="quick-search-buttons">
+                <button data-query="Azrin"><i class="fas fa-user"></i> Azrin</button>
+                <button data-query="Lorin"><i class="fas fa-user"></i> Lorin</button>
+                <button data-query="Prianka"><i class="fas fa-user"></i> Prianka</button>
+            </div>
+            
+            <div class="search-toggle-wrapper">
+                <button id="searchToggleBtn"><i class="fas fa-search"></i></button>
+                <input type="text" id="searchBar" placeholder="Search..." aria-label="Search catalogues">
+            </div>
+        </div>
+    </header>
+
+    <div id="loading">Loading catalogues...</div>
     <div id="catalogue-container"></div>
 
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div id="caption"></div>
+    </div>
 
-    <!-- Include SQL.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script>
-        // Initialize SQL.js and load the database
+        // State management
+        let catalogues = [];
+
+        // DOM elements
+        const catalogueContainer = document.getElementById('catalogue-container');
+        const loadingElement = document.getElementById('loading');
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        const captionText = document.getElementById('caption');
+        const closeBtn = document.querySelector('.close');
+        const searchBar = document.getElementById('searchBar');
+        const searchToggleBtn = document.getElementById('searchToggleBtn');
+        const searchHeader = document.getElementById('searchHeader');
+        const quickSearchButtons = document.querySelectorAll('.quick-search-buttons button');
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            setupImageModal();
+            setupSearchFunctionality();
+            loadDatabase();
+        });
+
+        // Load and read the SQLite database
         async function loadDatabase() {
-            const response = await fetch("cat.db"); // Path to your .db file
-            const arrayBuffer = await response.arrayBuffer();
-            const SQL = await initSqlJs({
-                locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-            });
-            const db = new SQL.Database(new Uint8Array(arrayBuffer));
-            return db;
-        }
-
-        // Fetch and display catalogues
-        async function fetchCatalogues() {
-            document.getElementById("loading").style.display = "block";
             try {
-                const db = await loadDatabase();
-                const query = "SELECT * FROM catalogues"; // Adjust the table name if needed
-                const results = db.exec(query);
+                loadingElement.textContent = "Loading catalogues...";
+                
+                // Load SQL.js
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                });
 
-                if (results.length > 0) {
-                    const catalogues = results[0].values.map(row => ({
-                        id: row[0],
-                        name: row[1],
-                        liveArtist: row[2],
-                        brandName: row[3],
-                        liveDate: row[4],
-                        primaryImage: row[5],
-                        secondaryImages: JSON.parse(row[6]) // Assuming secondaryImages is stored as JSON
-                    }));
-                    displayCatalogues(catalogues);
+                // Fetch the .db file
+                const response = await fetch('cat.db');
+                if (!response.ok) throw new Error("Failed to load database file");
+                const dbBuffer = await response.arrayBuffer();
+
+                // Open the database
+                const db = new SQL.Database(new Uint8Array(dbBuffer));
+
+                // Query data - sorted by date (newest first)
+                const result = db.exec(`
+                    SELECT * FROM catalogues 
+                    ORDER BY date(liveDate) DESC
+                `);
+                
+                if (result.length === 0) {
+                    showEmptyState();
+                    return;
                 }
+
+                // Format the data
+                catalogues = result[0].values.map(row => ({
+                    id: row[0],
+                    name: row[1],
+                    liveArtist: row[2],
+                    brandName: row[3],
+                    liveDate: row[4],
+                    primaryImages: JSON.parse(row[5]),
+                    secondaryImages: JSON.parse(row[6])
+                }));
+
+                displayCatalogues();
+                
             } catch (error) {
                 console.error("Error loading database:", error);
-                alert("Failed to load catalogues. Please try again later.");
-            } finally {
-                document.getElementById("loading").style.display = "none";
+                loadingElement.textContent = "Error loading catalogues. Make sure cat.db exists in the same folder.";
+                showEmptyState();
             }
         }
 
-        // Display catalogues in the HTML
-        function displayCatalogues(catalogues) {
-            const container = document.getElementById("catalogue-container");
-            container.innerHTML = catalogues.map(catalogue => `
-                <div class="catalogue">
-                    <h2>${catalogue.name}</h2>
-                    <p><strong>Live Artist:</strong> ${catalogue.liveArtist}</p>
-                    <p><strong>Brand:</strong> ${catalogue.brandName}</p>
-                    <p><strong>Live Date:</strong> ${catalogue.liveDate}</p>
-                    <img class="primary-image" src="${catalogue.primaryImage}" alt="Primary Image">
-                    <details>
-                        <summary>View Secondary Images</summary>
-                        <div class="secondary-images">
-                            ${catalogue.secondaryImages.map(img => `
-                                <img src="${img}" alt="Secondary Image">
-                            `).join("")}
+        // Display catalogues in the UI
+        function displayCatalogues() {
+            loadingElement.style.display = 'none';
+            
+            if (catalogues.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            catalogueContainer.innerHTML = catalogues.map(catalogue => {
+                const escapedName = catalogue.name.replace(/'/g, "\\'");
+                const formattedDate = formatDate(catalogue.liveDate);
+                
+                return `
+                    <div class="catalogue">
+                        <h2>${catalogue.name}</h2>
+                        <p><strong>Artist:</strong> ${catalogue.liveArtist}</p>
+                        <p><strong>Date:</strong> ${formattedDate}</p>
+                        <p><strong>Link:</strong> <a href="${catalogue.brandName}" target="_blank">View Live</a></p>
+
+                        <div class="image-gallery">
+                            <div class="gallery-title"><i class="fas fa-images"></i> Primary Images (${catalogue.primaryImages.length})</div>
+                            <div class="image-grid">
+                                ${catalogue.primaryImages.map(img => `
+                                    <div class="image-item">
+                                        <img src="${img}" alt="Primary Image" onclick="openModal('${img.replace(/'/g, "\\'")}', '${escapedName} - Primary Image')">
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
-                    </details>
+                        
+                        ${catalogue.secondaryImages.length > 0 ? `
+                        <details>
+                            <summary><i class="fas fa-images"></i> Secondary Images (${catalogue.secondaryImages.length})</summary>
+                            <div class="image-gallery">
+                                <div class="image-grid">
+                                    ${catalogue.secondaryImages.map(img => `
+                                        <div class="image-item">
+                                            <img src="${img}" alt="Secondary Image" onclick="openModal('${img.replace(/'/g, "\\'")}', '${escapedName} - Secondary Image')">
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </details>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
 
+        // Format date (YYYY-MM-DD → DD/MM/YYYY)
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown';
+            
+            try {
+                const [year, month, day] = dateString.split('-');
+                if (year && month && day) {
+                    return `${day}/${month}/${year}`;
+                }
+                return dateString;
+            } catch (e) {
+                console.error("Error formatting date:", e);
+                return dateString;
+            }
+        }
+
+        // Show empty state
+        function showEmptyState() {
+            catalogueContainer.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-book-open"></i>
+                    <h3>No Catalogues Found</h3>
+                    <p>The database is empty or could not be loaded.</p>
                 </div>
-            `).join("");
+            `;
         }
 
+        // Image modal functions
+        function setupImageModal() {
+            window.openModal = function(imgSrc, altText = "") {
+                modal.style.display = "block";
+                modalImg.src = imgSrc;
+                captionText.innerHTML = altText;
+                document.body.style.overflow = "hidden";
+            };
 
-document.getElementById("searchBar").addEventListener("input", (e) => {
-    const query = e.target.value.toLowerCase();
-    const catalogues = document.querySelectorAll(".catalogue");
-    catalogues.forEach(catalogue => {
-        const name = catalogue.querySelector("h2").textContent.toLowerCase();
-        const artist = catalogue.querySelector("p:nth-of-type(1)").textContent.toLowerCase();
-        const brand = catalogue.querySelector("p:nth-of-type(2)").textContent.toLowerCase();
-        const date = catalogue.querySelector("p:nth-of-type(3)").textContent.toLowerCase();
+            closeBtn.onclick = function() {
+                modal.style.display = "none";
+                document.body.style.overflow = "auto";
+            };
 
-        // Check if the query matches any of the fields (name, artist, brand, or date)
-        if (
-            name.includes(query) ||
-            artist.includes(query) ||
-            brand.includes(query) ||
-            date.includes(query)
-        ) {
-            catalogue.style.display = "block";
-        } else {
-            catalogue.style.display = "none";
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                    document.body.style.overflow = "auto";
+                }
+            };
         }
-    });
-});
 
-        // Load catalogues on page load
-        fetchCatalogues();
+        // Search functionality
+        function setupSearchFunctionality() {
+            let searchOpen = false;
+
+            // Toggle search bar
+            searchToggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleSearch();
+            });
+
+            // Quick search buttons
+            quickSearchButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const query = button.getAttribute('data-query');
+                    searchBar.value = query;
+                    searchBar.dispatchEvent(new Event('input'));
+                    if (searchOpen) toggleSearch();
+                });
+            });
+
+            // Live search
+            searchBar.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const catalogueElements = document.querySelectorAll(".catalogue");
+                
+                catalogueElements.forEach(catalogue => {
+                    const textContent = catalogue.textContent.toLowerCase();
+                    catalogue.style.display = textContent.includes(query) ? "block" : "none";
+                });
+            });
+
+            function toggleSearch() {
+                searchOpen = !searchOpen;
+                searchBar.classList.toggle('active');
+                searchHeader.classList.toggle('search-active');
+                
+                if (searchOpen) {
+                    setTimeout(() => searchBar.focus(), 300);
+                } else {
+                    searchBar.value = '';
+                    searchBar.dispatchEvent(new Event('input'));
+                }
+            }
+        }
+		function setupImageModal() {
+    window.openModal = function(imgSrc, altText = "") {
+        modal.style.display = "block";
+        modalImg.src = imgSrc;
+        captionText.innerHTML = altText;
+        document.body.style.overflow = "hidden";
+        
+        // Add ESC key listener when modal opens
+        document.addEventListener('keydown', handleKeyDown);
+    };
+
+    function handleKeyDown(e) {
+        if (e.key === 'Escape' && modal.style.display === "block") {
+            closeModal();
+        }
+    }
+
+    function closeModal() {
+        modal.style.display = "none";
+        document.body.style.overflow = "auto";
+        // Remove the keydown listener when modal closes
+        document.removeEventListener('keydown', handleKeyDown);
+    }
+
+    closeBtn.onclick = closeModal;
+    modal.onclick = function(event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
+}
     </script>
 </body>
 </html>
