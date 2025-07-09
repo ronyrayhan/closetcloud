@@ -12,7 +12,7 @@ CORS(app)
 DATABASE = "cat.db"
 
 # Folder to store uploaded images
-UPLOAD_FOLDER = "closetcloud/uploads"
+UPLOAD_FOLDER = "uploads"
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
