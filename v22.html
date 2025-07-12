@@ -718,7 +718,7 @@
             const url = product.querySelector("a").href;
 			const sku = product.querySelector(".sku").textContent.trim();
 
-            const textToCopy = `Price: ${price}\nSKU: ${sku} \nURL: ${url}`;
+            const textToCopy = `Price: ${price}\n ${sku} \nURL: ${url}`;
 
             navigator.clipboard.writeText(textToCopy).then(() => {
                 showCopyNotification("Product details copied!");
