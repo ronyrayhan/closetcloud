@@ -730,9 +730,10 @@
 
         // Copy category URL and price to clipboard
         function copyCategoryUrl(url, price) {
-            const textToCopy = `${price}\nCategory URL: ${url}`;
+            //const textToCopy = `${price}\nCategory URL: ${url}`;
+		const textToCopy = `However, you can find a similar one here:${url}`;
             navigator.clipboard.writeText(textToCopy).then(() => {
-                showCopyNotification("Price & Category URL copied!");
+                showCopyNotification("Copied!");
             }).catch((error) => {
                 console.error("Failed to copy:", error);
                 showCopyNotification("Failed to copy", true);
