@@ -5,26 +5,745 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Database Manager</title>
     <style>
-        /* [Previous CSS styles remain exactly the same] */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .search-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            gap: 15px;
+        }
+
+        #searchInput {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .bulk-actions {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            display: none;
+        }
+        
+        .select-all {
+            margin-right: 15px;
+        }
+        
+        .bulk-edit-btn {
+            background-color: #f39c12;
+            color: white;
+        }
+        
+        .selected-count {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .select-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .selected-row {
+            background-color: #e8f4fc !important;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .edit-btn {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .save-btn {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .cancel-btn {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .add-btn {
+            background-color: #9b59b6;
+            color: white;
+            padding: 12px 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: modalopen 0.3s;
+        }
+
+        @keyframes modalopen {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+            gap: 15px;
+        }
+
+        .pagination button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pagination button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background-color: #2980b9;
+        }
+
+        #pageInfo {
+            font-weight: 500;
+            color: #7f8c8d;
+        }
+
+        .product-image {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 4px;
+            object-fit: contain;
+        }
+
+        .image-preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 4px;
+            margin-top: 10px;
+            object-fit: contain;
+            border: 1px solid #ddd;
+            padding: 5px;
+            background-color: #f8f9fa;
+        }
+
+        .image-preview-placeholder {
+            width: 200px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            border: 1px dashed #ddd;
+            color: #95a5a6;
+            font-style: italic;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loader:after {
+            content: "";
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-field {
+            border-color: #e74c3c !important;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #2ecc71;
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        .toast.error {
+            background: #e74c3c;
+        }
+
+        .toast.warning {
+            background: #f39c12;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
-    <!-- [Previous HTML structure remains the same until the bulk actions section] -->
-    
-    <div class="bulk-actions" id="bulkActions" style="display: none;">
-        <div class="select-all">
-            <input type="checkbox" id="selectAll" class="select-checkbox" onchange="toggleSelectAll()">
-            <label for="selectAll">Select All</label>
+    <div class="container">
+        <h1>Product Database Manager</h1>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search products...">
+            <button onclick="showAddModal()" class="btn add-btn">Add New Product</button>
         </div>
-        <span id="selectedCount" class="selected-count">0 selected</span>
-        <button class="btn bulk-edit-btn" onclick="showBulkEditModal()">Bulk Edit</button>
-        <button class="btn delete-btn" onclick="confirmBulkDelete()">Delete Selected</button>
+        
+        <div class="bulk-actions" id="bulkActions">
+            <div class="select-all">
+                <input type="checkbox" id="selectAll" class="select-checkbox" onchange="toggleSelectAll()">
+                <label for="selectAll">Select All</label>
+            </div>
+            <span id="selectedCount" class="selected-count">0 selected</span>
+            <button class="btn bulk-edit-btn" onclick="showBulkEditModal()">Bulk Edit</button>
+            <button class="btn delete-btn" onclick="confirmBulkDelete()">Delete Selected</button>
+        </div>
+        
+        <div id="productsTable">
+            <p>Loading products...</p>
+        </div>
+        
+        <div class="pagination">
+            <button id="prevPage" onclick="changePage(-1)">Previous</button>
+            <span id="pageInfo">Page 1 of 1</span>
+            <button id="nextPage" onclick="changePage(1)">Next</button>
+        </div>
     </div>
-    
-    <!-- [Rest of previous HTML remains the same until the scripts] -->
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Edit Product</h2>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label for="title">Title:</label>
+                    <input type="text" id="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="sku">SKU:</label>
+                    <input type="text" id="sku" required>
+                </div>
+                <div class="form-group">
+                    <label for="price">Price:</label>
+                    <input type="text" id="price" required>
+                </div>
+                <div class="form-group">
+                    <label for="image_url">Image URL:</label>
+                    <input type="text" id="image_url" required oninput="updateImagePreview()">
+                    <div class="image-preview-container">
+                        <div id="imagePreviewPlaceholder" class="image-preview-placeholder">Image Preview</div>
+                        <img id="imagePreview" class="image-preview" style="display: none;" onerror="this.style.display='none'; document.getElementById('imagePreviewPlaceholder').style.display='flex';">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="url">Product URL:</label>
+                    <input type="text" id="url" required>
+                </div>
+                <div class="form-group">
+                    <label for="categories">Categories (JSON):</label>
+                    <textarea id="categories" rows="4" required></textarea>
+                </div>
+                <div class="action-btns">
+                    <button type="button" class="btn save-btn" onclick="saveProduct()">Save</button>
+                    <button type="button" class="btn cancel-btn" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Edit Modal -->
+    <div id="bulkEditModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeBulkEditModal()">&times;</span>
+            <h2>Bulk Edit Products (<span id="bulkEditCount">0</span> selected)</h2>
+            <form id="bulkEditForm">
+                <div class="form-group">
+                    <label>Fields to update:</label>
+                    <div>
+                        <input type="checkbox" id="bulkEditTitle" onchange="toggleBulkField('title')">
+                        <label for="bulkEditTitle">Title</label>
+                        
+                        <input type="checkbox" id="bulkEditPrice" onchange="toggleBulkField('price')">
+                        <label for="bulkEditPrice">Price</label>
+                        
+                        <input type="checkbox" id="bulkEditImage" onchange="toggleBulkField('image_url')">
+                        <label for="bulkEditImage">Image URL</label>
+                        
+                        <input type="checkbox" id="bulkEditCategories" onchange="toggleBulkField('categories')">
+                        <label for="bulkEditCategories">Categories</label>
+                    </div>
+                </div>
+                
+                <div id="bulkTitleField" class="form-group" style="display: none;">
+                    <label for="bulkTitle">New Title:</label>
+                    <input type="text" id="bulkTitle">
+                </div>
+                
+                <div id="bulkPriceField" class="form-group" style="display: none;">
+                    <label for="bulkPrice">New Price:</label>
+                    <input type="text" id="bulkPrice">
+                </div>
+                
+                <div id="bulkImageField" class="form-group" style="display: none;">
+                    <label for="bulkImageUrl">New Image URL:</label>
+                    <input type="text" id="bulkImageUrl" oninput="updateBulkImagePreview()">
+                    <div class="image-preview-container">
+                        <div id="bulkImagePreviewPlaceholder" class="image-preview-placeholder">Image Preview</div>
+                        <img id="bulkImagePreview" class="image-preview" style="display: none;" onerror="this.style.display='none'; document.getElementById('bulkImagePreviewPlaceholder').style.display='flex';">
+                    </div>
+                </div>
+                
+                <div id="bulkCategoriesField" class="form-group" style="display: none;">
+                    <label for="bulkCategories">New Categories (JSON):</label>
+                    <textarea id="bulkCategories" rows="4"></textarea>
+                </div>
+                
+                <div class="action-btns">
+                    <button type="button" class="btn save-btn" onclick="applyBulkEdit()">Apply Changes</button>
+                    <button type="button" class="btn cancel-btn" onclick="closeBulkEditModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
-        // [Previous JavaScript variables and functions remain the same until the bulk edit functions]
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let totalProducts = 0;
+        let allProducts = [];
+        let filteredProducts = [];
+        let selectedProducts = new Set();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProducts();
+            document.getElementById('searchInput').addEventListener('input', searchProducts);
+        });
+
+        async function loadProducts() {
+            try {
+                showLoader();
+                const response = await fetch('/api/products');
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                allProducts = await response.json();
+                totalProducts = allProducts.length;
+                filteredProducts = [...allProducts];
+                displayProducts(getPaginatedProducts());
+                updatePagination();
+            } catch (error) {
+                console.error('Error loading products:', error);
+                document.getElementById('productsTable').innerHTML = `
+                    <div class="error-message">
+                        <p>Error loading products. Please try again later.</p>
+                        <button onclick="loadProducts()" class="btn">Retry</button>
+                    </div>
+                `;
+            } finally {
+                hideLoader();
+            }
+        }
+
+        function showLoader() {
+            const loader = document.createElement('div');
+            loader.className = 'loader';
+            loader.id = 'pageLoader';
+            document.body.appendChild(loader);
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById('pageLoader');
+            if (loader) loader.remove();
+        }
+
+        function getPaginatedProducts() {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+        }
+
+        function displayProducts(products) {
+            if (products.length === 0) {
+                document.getElementById('productsTable').innerHTML = '<p>No products found.</p>';
+                return;
+            }
+
+            const tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllHeader" class="select-checkbox"></th>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>SKU</th>
+                            <th>Price</th>
+                            <th>Image</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${products.map(product => `
+                            <tr>
+                                <td><input type="checkbox" class="product-checkbox select-checkbox" data-id="${product.id}" 
+                                    ${selectedProducts.has(product.id.toString()) ? 'checked' : ''}></td>
+                                <td>${product.id}</td>
+                                <td>${escapeHtml(product.title)}</td>
+                                <td>${escapeHtml(product.sku)}</td>
+                                <td>${escapeHtml(product.price)}</td>
+                                <td><img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.title)}" class="product-image" onerror="this.src='https://via.placeholder.com/100?text=No+Image'"></td>
+                                <td class="action-btns">
+                                    <button class="btn edit-btn" onclick="showEditModal(${product.id})">Edit</button>
+                                    <button class="btn delete-btn" onclick="confirmDelete(${product.id})">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('productsTable').innerHTML = tableHtml;
+            
+            // Add event listeners to checkboxes
+            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    toggleProductSelection(this);
+                });
+                
+                // Highlight row if selected
+                if (checkbox.checked) {
+                    checkbox.closest('tr').classList.add('selected-row');
+                }
+            });
+            
+            // Add event listener to select all header checkbox
+            document.getElementById('selectAllHeader').addEventListener('change', function() {
+                document.getElementById('selectAll').checked = this.checked;
+                toggleSelectAll();
+            });
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            const checkboxes = document.querySelectorAll('.product-checkbox');
+            
+            selectedProducts.clear();
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+                const productId = checkbox.getAttribute('data-id');
+                if (selectAll) {
+                    selectedProducts.add(productId);
+                    checkbox.closest('tr').classList.add('selected-row');
+                } else {
+                    checkbox.closest('tr').classList.remove('selected-row');
+                }
+            });
+            
+            updateSelectedCount();
+            toggleBulkActions();
+        }
+
+        function toggleProductSelection(checkbox) {
+            const productId = checkbox.getAttribute('data-id');
+            const row = checkbox.closest('tr');
+            
+            if (checkbox.checked) {
+                selectedProducts.add(productId);
+                row.classList.add('selected-row');
+            } else {
+                selectedProducts.delete(productId);
+                row.classList.remove('selected-row');
+                document.getElementById('selectAll').checked = false;
+                document.getElementById('selectAllHeader').checked = false;
+            }
+            
+            updateSelectedCount();
+            toggleBulkActions();
+        }
+
+        function updateSelectedCount() {
+            document.getElementById('selectedCount').textContent = `${selectedProducts.size} selected`;
+            document.getElementById('bulkEditCount').textContent = selectedProducts.size;
+        }
+
+        function toggleBulkActions() {
+            const bulkActions = document.getElementById('bulkActions');
+            bulkActions.style.display = selectedProducts.size > 0 ? 'flex' : 'none';
+        }
+
+        function searchProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filteredProducts = allProducts.filter(product => 
+                product.title.toLowerCase().includes(searchTerm) || 
+                product.sku.toLowerCase().includes(searchTerm)
+            );
+            totalProducts = filteredProducts.length;
+            currentPage = 1;
+            displayProducts(getPaginatedProducts());
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(totalProducts / itemsPerPage);
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+        }
+
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            const totalPages = Math.ceil(totalProducts / itemsPerPage);
+            
+            if (newPage > 0 && newPage <= totalPages) {
+                currentPage = newPage;
+                displayProducts(getPaginatedProducts());
+                updatePagination();
+            }
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add New Product';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('imagePreviewPlaceholder').style.display = 'flex';
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        async function showEditModal(productId) {
+            try {
+                showLoader();
+                const response = await fetch(`/api/products/${productId}`);
+                if (!response.ok) throw new Error('Failed to fetch product');
+                
+                const product = await response.json();
+                if (product) {
+                    document.getElementById('modalTitle').textContent = 'Edit Product';
+                    document.getElementById('productId').value = product.id;
+                    document.getElementById('title').value = product.title;
+                    document.getElementById('sku').value = product.sku;
+                    document.getElementById('price').value = product.price;
+                    document.getElementById('image_url').value = product.image_url;
+                    document.getElementById('url').value = product.url;
+                    document.getElementById('categories').value = JSON.stringify(product.categories, null, 2);
+                    
+                    updateImagePreview();
+                    document.getElementById('editModal').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error fetching product:', error);
+                showToast('Error loading product details. Please try again.', 'error');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        function updateImagePreview() {
+            const imageUrl = document.getElementById('image_url').value;
+            const preview = document.getElementById('imagePreview');
+            const placeholder = document.getElementById('imagePreviewPlaceholder');
+            
+            if (imageUrl) {
+                preview.src = imageUrl;
+                preview.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                preview.style.display = 'none';
+                placeholder.style.display = 'flex';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
 
         function showBulkEditModal() {
             if (selectedProducts.size === 0) {
@@ -61,6 +780,55 @@
             } else {
                 preview.style.display = 'none';
                 placeholder.style.display = 'flex';
+            }
+        }
+
+        async function saveProduct() {
+            const productId = document.getElementById('productId').value;
+            const isNew = productId === '';
+            
+            const productData = {
+                title: document.getElementById('title').value,
+                sku: document.getElementById('sku').value,
+                price: document.getElementById('price').value,
+                image_url: document.getElementById('image_url').value,
+                url: document.getElementById('url').value,
+                categories: JSON.parse(document.getElementById('categories').value),
+                scraped_date: new Date().toISOString()
+            };
+
+            try {
+                showLoader();
+                const saveBtn = document.querySelector('#editModal .save-btn');
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+
+                const url = isNew ? '/api/products' : `/api/products/${productId}`;
+                const method = isNew ? 'POST' : 'PUT';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                if (!response.ok) throw new Error('Failed to save product');
+
+                closeModal();
+                await loadProducts();
+                showToast(`Product ${isNew ? 'added' : 'updated'} successfully!`);
+            } catch (error) {
+                console.error('Error saving product:', error);
+                showToast('Error saving product. Please check the data and try again.', 'error');
+            } finally {
+                hideLoader();
+                const saveBtn = document.querySelector('#editModal .save-btn');
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
             }
         }
 
@@ -153,7 +921,110 @@
             }
         }
 
-        // [Rest of the JavaScript remains the same]
+        function confirmDelete(productId) {
+            if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+                deleteProduct(productId);
+            }
+        }
+
+        function confirmBulkDelete() {
+            if (selectedProducts.size === 0) {
+                showToast('Please select at least one product to delete.', 'warning');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete ${selectedProducts.size} selected products? This action cannot be undone.`)) {
+                bulkDeleteProducts();
+            }
+        }
+
+        async function deleteProduct(productId) {
+            try {
+                showLoader();
+                const response = await fetch(`/api/products/${productId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete product');
+
+                await loadProducts();
+                showToast('Product deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                showToast('Error deleting product. Please try again.', 'error');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        async function bulkDeleteProducts() {
+            try {
+                showLoader();
+                const deleteBtn = document.querySelector('.bulk-actions .delete-btn');
+                deleteBtn.disabled = true;
+                deleteBtn.textContent = 'Deleting...';
+                
+                // Process each selected product
+                const productIds = Array.from(selectedProducts);
+                const promises = productIds.map(productId => 
+                    fetch(`/api/products/${productId}`, {
+                        method: 'DELETE'
+                    }).then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Failed to delete product ${productId}`);
+                        }
+                        return response.json();
+                    })
+                );
+                
+                await Promise.all(promises);
+                
+                // Refresh and reset
+                await loadProducts();
+                selectedProducts.clear();
+                updateSelectedCount();
+                toggleBulkActions();
+                document.getElementById('selectAll').checked = false;
+                document.getElementById('selectAllHeader').checked = false;
+                showToast(`Deleted ${productIds.length} products successfully!`);
+            } catch (error) {
+                console.error('Error during bulk delete:', error);
+                showToast('Error during bulk delete. Some products may not have been deleted.', 'error');
+            } finally {
+                hideLoader();
+                const deleteBtn = document.querySelector('.bulk-actions .delete-btn');
+                if (deleteBtn) {
+                    deleteBtn.disabled = false;
+                    deleteBtn.textContent = 'Delete Selected';
+                }
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            // Remove any existing toasts
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) existingToast.remove();
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
     </script>
 </body>
 </html>
