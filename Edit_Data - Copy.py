@@ -1,7 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import datetime
-import sqlite3
-import json
 
 app = Flask(__name__)
 
@@ -9,6 +7,8 @@ DATABASE = 'scraped_data.db'
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
 }
+import sqlite3
+import json
 
 def initialize_db():
     conn = sqlite3.connect(DATABASE)
@@ -69,53 +69,20 @@ def add_product(product_data):
 def update_product(product_id, product_data):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    
-    # Build the update query dynamically based on provided fields
-    update_fields = []
-    update_values = []
-    
-    if 'title' in product_data:
-        update_fields.append("title = ?")
-        update_values.append(product_data['title'])
-    
-    if 'sku' in product_data:
-        update_fields.append("sku = ?")
-        update_values.append(product_data['sku'])
-    
-    if 'price' in product_data:
-        update_fields.append("price = ?")
-        update_values.append(product_data['price'])
-    
-    if 'image_url' in product_data:
-        update_fields.append("image_url = ?")
-        update_values.append(product_data['image_url'])
-    
-    if 'url' in product_data:
-        update_fields.append("url = ?")
-        update_values.append(product_data['url'])
-    
-    if 'categories' in product_data:
-        update_fields.append("categories = ?")
-        update_values.append(json.dumps(product_data['categories']))
-    
-    # Always update the scraped_date
-    update_fields.append("scraped_date = ?")
-    update_values.append(product_data.get('scraped_date', datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-    
-    if not update_fields:
-        conn.close()
-        return 0  # No fields to update
-    
-    # Add the product_id for the WHERE clause
-    update_values.append(product_id)
-    
-    query = f'''
+    cursor.execute('''
         UPDATE products 
-        SET {', '.join(update_fields)}
+        SET title = ?, sku = ?, price = ?, image_url = ?, url = ?, categories = ?, scraped_date = ?
         WHERE id = ?
-    '''
-    
-    cursor.execute(query, update_values)
+    ''', (
+        product_data['title'],
+        product_data['sku'],
+        product_data['price'],
+        product_data['image_url'],
+        product_data['url'],
+        json.dumps(product_data['categories']),
+        product_data['scraped_date'],
+        product_id
+    ))
     conn.commit()
     affected_rows = cursor.rowcount
     conn.close()
@@ -129,7 +96,6 @@ def delete_product(product_id):
     affected_rows = cursor.rowcount
     conn.close()
     return affected_rows
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -149,10 +115,6 @@ def api_get_product(product_id):
 @app.route('/api/products', methods=['POST'])
 def api_add_product():
     data = request.get_json()
-    required_fields = ['title', 'sku', 'price', 'image_url', 'url', 'categories']
-    if not all(field in data for field in required_fields):
-        return jsonify({'error': 'Missing required fields'}), 400
-    
     data['scraped_date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     product_id = add_product(data)
     return jsonify({'id': product_id}), 201
@@ -160,14 +122,11 @@ def api_add_product():
 @app.route('/api/products/<int:product_id>', methods=['PUT'])
 def api_update_product(product_id):
     data = request.get_json()
-    if not data:
-        return jsonify({'error': 'No data provided'}), 400
-    
     data['scraped_date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     affected_rows = update_product(product_id, data)
     if affected_rows:
         return jsonify({'success': True})
-    return jsonify({'error': 'Product not found or no changes made'}), 404
+    return jsonify({'error': 'Product not found'}), 404
 
 @app.route('/api/products/<int:product_id>', methods=['DELETE'])
 def api_delete_product(product_id):
