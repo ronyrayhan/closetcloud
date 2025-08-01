@@ -560,7 +560,7 @@
             transition: width 0.3s ease;
         }
 
-        /* Enhanced Image Modal with Navigation */
+        /* Image Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -604,7 +604,6 @@
             font-weight: bold;
             cursor: pointer;
             transition: var(--transition);
-            z-index: 1002;
         }
 
         .close:hover,
@@ -626,41 +625,6 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1001;
-        }
-
-        /* Navigation buttons */
-        .nav-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            color: white;
-            font-size: 2rem;
-            background: rgba(0,0,0,0.5);
-            border: none;
-            padding: 15px;
-            cursor: pointer;
-            z-index: 1001;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: var(--transition);
-        }
-
-        .nav-btn:hover {
-            background: rgba(0,0,0,0.8);
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .prev-btn {
-            left: 20px;
-        }
-
-        .next-btn {
-            right: 20px;
         }
 
         .error-message {
@@ -736,12 +700,6 @@
             .search-toggle-wrapper {
                 order: 1;
             }
-
-            .nav-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1.5rem;
-            }
         }
     </style>
 </head>
@@ -764,289 +722,275 @@
     <div id="loading">Loading catalogues...</div>
     <div id="catalogue-container"></div>
 
-    <!-- Enhanced Image Modal with Navigation -->
+    
+
+    <!-- Image Modal for full-size viewing -->
     <div id="imageModal" class="modal">
         <span class="close">&times;</span>
-        <button class="nav-btn prev-btn" onclick="navigateImages(-1)">❮</button>
         <img class="modal-content" id="modalImage">
-        <button class="nav-btn next-btn" onclick="navigateImages(1)">❯</button>
         <div id="caption"></div>
     </div>
+<script>
+    // State management
+    let catalogues = [];
+    let currentCatalogueIndex = 0;
+    let currentImageSet = [];
+    let currentImageIndex = 0;
 
-    <script>
-        // State management
-        let catalogues = [];
-        let currentImageIndex = 0;
-        let currentImageSet = [];
-        let currentCatalogueId = null;
+    // DOM elements
+    const catalogueContainer = document.getElementById('catalogue-container');
+    const loadingElement = document.getElementById('loading');
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    const captionText = document.getElementById('caption');
+    const closeBtn = document.querySelector('.close');
+    const searchBar = document.getElementById('searchBar');
+    const searchToggleBtn = document.getElementById('searchToggleBtn');
+    const searchHeader = document.getElementById('searchHeader');
+    const quickSearchButtons = document.querySelectorAll('.quick-search-buttons button');
 
-        // DOM elements
-        const catalogueContainer = document.getElementById('catalogue-container');
-        const loadingElement = document.getElementById('loading');
-        const modal = document.getElementById('imageModal');
-        const modalImg = document.getElementById('modalImage');
-        const captionText = document.getElementById('caption');
-        const closeBtn = document.querySelector('.close');
-        const searchBar = document.getElementById('searchBar');
-        const searchToggleBtn = document.getElementById('searchToggleBtn');
-        const searchHeader = document.getElementById('searchHeader');
-        const quickSearchButtons = document.querySelectorAll('.quick-search-buttons button');
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        setupImageModal();
+        setupSearchFunctionality();
+        loadDatabase();
+    });
 
-        // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            setupImageModal();
-            setupSearchFunctionality();
-            loadDatabase();
-        });
-
-        // Load and read the SQLite database
-        async function loadDatabase() {
-            try {
-                loadingElement.textContent = "Loading catalogues...";
-                
-                // Load SQL.js
-                const SQL = await initSqlJs({
-                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-                });
-
-                // Fetch the .db file
-                const response = await fetch('cat.db');
-                if (!response.ok) throw new Error("Failed to load database file");
-                const dbBuffer = await response.arrayBuffer();
-
-                // Open the database
-                const db = new SQL.Database(new Uint8Array(dbBuffer));
-
-                // Query data - sorted by date (newest first)
-                const result = db.exec(`
-                    SELECT * FROM catalogues 
-                    ORDER BY date(liveDate) DESC
-                `);
-                
-                if (result.length === 0) {
-                    showEmptyState();
-                    return;
-                }
-
-                // Format the data
-                catalogues = result[0].values.map(row => ({
-                    id: row[0],
-                    name: row[1],
-                    liveArtist: row[2],
-                    brandName: row[3],
-                    liveDate: row[4],
-                    primaryImages: JSON.parse(row[5]),
-                    secondaryImages: JSON.parse(row[6])
-                }));
-
-                catalogues.sort((a, b) => new Date(b.liveDate) - new Date(a.liveDate));
-                displayCatalogues();
-
-            } catch (error) {
-                console.error("Error loading database:", error);
-                loadingElement.textContent = "Error loading catalogues. Make sure cat.db exists in the same folder.";
-                showEmptyState();
-            }
-        }
-
-        // Display catalogues in the UI
-        function displayCatalogues() {
-            loadingElement.style.display = 'none';
+    // Load and read the SQLite database
+    async function loadDatabase() {
+        try {
+            loadingElement.textContent = "Loading catalogues...";
             
-            if (catalogues.length === 0) {
+            // Load SQL.js
+            const SQL = await initSqlJs({
+                locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+            });
+
+            // Fetch the .db file
+            const response = await fetch('cat.db');
+            if (!response.ok) throw new Error("Failed to load database file");
+            const dbBuffer = await response.arrayBuffer();
+
+            // Open the database
+            const db = new SQL.Database(new Uint8Array(dbBuffer));
+
+            // Query data - sorted by date (newest first)
+            const result = db.exec(`
+                SELECT * FROM catalogues 
+                ORDER BY date(liveDate) DESC
+            `);
+            
+            if (result.length === 0) {
                 showEmptyState();
                 return;
             }
 
-            catalogueContainer.innerHTML = catalogues.map(catalogue => {
-                const escapedName = catalogue.name.replace(/'/g, "\\'");
-                const formattedDate = formatDate(catalogue.liveDate);
-                
-                return `
-                    <div class="catalogue">
-                        <h2>${catalogue.name}</h2>
-                        <p><strong>Artist:</strong> ${catalogue.liveArtist}</p>
-                        <p><strong>Date:</strong> ${formattedDate}</p>
-                        <p><strong>Link:</strong> <a href="${catalogue.brandName}" target="_blank">View Live</a></p>
+            // Format the data
+            catalogues = result[0].values.map(row => ({
+                id: row[0],
+                name: row[1],
+                liveArtist: row[2],
+                brandName: row[3],
+                liveDate: row[4],
+                primaryImages: JSON.parse(row[5]),
+                secondaryImages: JSON.parse(row[6])
+            }));
 
+            catalogues.sort((a, b) => new Date(b.liveDate) - new Date(a.liveDate));
+            displayCatalogues();
+
+        } catch (error) {
+            console.error("Error loading database:", error);
+            loadingElement.textContent = "Error loading catalogues. Make sure cat.db exists in the same folder.";
+            showEmptyState();
+        }
+    }
+
+    // Display catalogues in the UI
+    function displayCatalogues() {
+        loadingElement.style.display = 'none';
+        
+        if (catalogues.length === 0) {
+            showEmptyState();
+            return;
+        }
+
+        catalogueContainer.innerHTML = catalogues.map(catalogue => {
+            const escapedName = catalogue.name.replace(/'/g, "\\'");
+            const formattedDate = formatDate(catalogue.liveDate);
+            
+            return `
+                <div class="catalogue">
+                    <h2>${catalogue.name}</h2>
+                    <p><strong>Artist:</strong> ${catalogue.liveArtist}</p>
+                    <p><strong>Date:</strong> ${formattedDate}</p>
+                    <p><strong>Link:</strong> <a href="${catalogue.brandName}" target="_blank">View Live</a></p>
+
+                    <div class="image-gallery">
+                        <div class="gallery-title"><i class="fas fa-images"></i> Primary Images (${catalogue.primaryImages.length})</div>
+                        <div class="image-grid">
+                            ${catalogue.primaryImages.map(img => `
+                                <div class="image-item">
+                                    <img src="${img}" alt="Primary Image" onclick="openModal('${img.replace(/'/g, "\\'")}', '${escapedName} - Primary Image', ${catalogue.id}, true)">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    ${catalogue.secondaryImages.length > 0 ? `
+                    <details>
+                        <summary><i class="fas fa-images"></i> Secondary Images (${catalogue.secondaryImages.length})</summary>
                         <div class="image-gallery">
-                            <div class="gallery-title"><i class="fas fa-images"></i> Primary Images (${catalogue.primaryImages.length})</div>
                             <div class="image-grid">
-                                ${catalogue.primaryImages.map((img, index) => `
+                                ${catalogue.secondaryImages.map(img => `
                                     <div class="image-item">
-                                        <img src="${img}" alt="Primary Image" 
-                                            onclick="openModal('${img.replace(/'/g, "\\'")}', 
-                                                    '${escapedName} - Primary Image (${index + 1}/${catalogue.primaryImages.length})', 
-                                                    ${catalogue.id})">
+                                        <img src="${img}" alt="Secondary Image" onclick="openModal('${img.replace(/'/g, "\\'")}', '${escapedName} - Secondary Image', ${catalogue.id}, false)">
                                     </div>
                                 `).join('')}
                             </div>
                         </div>
-                        
-                        ${catalogue.secondaryImages.length > 0 ? `
-                        <details>
-                            <summary><i class="fas fa-images"></i> Secondary Images (${catalogue.secondaryImages.length})</summary>
-                            <div class="image-gallery">
-                                <div class="image-grid">
-                                    ${catalogue.secondaryImages.map((img, index) => `
-                                        <div class="image-item">
-                                            <img src="${img}" alt="Secondary Image" 
-                                                onclick="openModal('${img.replace(/'/g, "\\'")}', 
-                                                        '${escapedName} - Secondary Image (${index + 1}/${catalogue.secondaryImages.length})', 
-                                                        ${catalogue.id})">
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </details>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Format date (YYYY-MM-DD → DD/MM/YYYY)
-        function formatDate(dateString) {
-            if (!dateString) return 'Unknown';
-
-            const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
-            if (match) {
-                const [, year, month, day] = match;
-                const shortYear = year.slice(-2);  // Get last 2 digits
-                return `${shortYear}/${month}/${day}`;
-            }
-
-            return dateString;
-        }
-
-        // Show empty state
-        function showEmptyState() {
-            catalogueContainer.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-book-open"></i>
-                    <h3>No Catalogues Found</h3>
-                    <p>The database is empty or could not be loaded.</p>
+                    </details>
+                    ` : ''}
                 </div>
             `;
+        }).join('');
+    }
+
+    // Format date (YYYY-MM-DD → DD/MM/YYYY)
+    function formatDate(dateString) {
+        if (!dateString) return 'Unknown';
+
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+        if (match) {
+            const [, year, month, day] = match;
+            const shortYear = year.slice(-2);  // Get last 2 digits
+            return `${shortYear}/${month}/${day}`;
         }
 
-        // Enhanced image modal functions with navigation
-        function setupImageModal() {
-            window.openModal = function(imgSrc, altText = "", catalogueId = null) {
-                // Get all images from the current catalogue
+        return dateString;
+    }
+
+    // Show empty state
+    function showEmptyState() {
+        catalogueContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-book-open"></i>
+                <h3>No Catalogues Found</h3>
+                <p>The database is empty or could not be loaded.</p>
+            </div>
+        `;
+    }
+
+    // Image modal functions
+    function setupImageModal() {
+        window.openModal = function(imgSrc, altText = "", catalogueId = null, isPrimary = true) {
+            modal.style.display = "block";
+            modalImg.src = imgSrc;
+            captionText.innerHTML = altText;
+            document.body.style.overflow = "hidden";
+            
+            // Find the current catalogue and set up navigation
+            if (catalogueId) {
                 const catalogue = catalogues.find(c => c.id === catalogueId);
                 if (catalogue) {
                     currentImageSet = [...catalogue.primaryImages, ...catalogue.secondaryImages];
                     currentImageIndex = currentImageSet.findIndex(img => img === imgSrc);
-                    currentCatalogueId = catalogueId;
-                }
-                
-                modal.style.display = "block";
-                modalImg.src = imgSrc;
-                captionText.innerHTML = altText;
-                document.body.style.overflow = "hidden";
-                
-                // Add keydown listener for navigation
-                document.addEventListener('keydown', handleKeyDown);
-            };
-
-            function handleKeyDown(e) {
-                if (e.key === 'Escape') {
-                    closeModal();
-                } else if (e.key === 'ArrowLeft') {
-                    navigateImages(-1); // Previous image
-                } else if (e.key === 'ArrowRight') {
-                    navigateImages(1); // Next image
+                    currentCatalogueIndex = catalogues.findIndex(c => c.id === catalogueId);
                 }
             }
+            
+            document.addEventListener('keydown', handleKeyDown);
+        };
 
-            window.navigateImages = function(direction) {
-                if (currentImageSet.length === 0) return;
-                
-                currentImageIndex += direction;
-                
-                // Wrap around if at beginning/end
-                if (currentImageIndex < 0) {
-                    currentImageIndex = currentImageSet.length - 1;
-                } else if (currentImageIndex >= currentImageSet.length) {
-                    currentImageIndex = 0;
-                }
-                
-                // Update modal with new image
-                const catalogue = catalogues.find(c => c.id === currentCatalogueId);
-                const newImageSrc = currentImageSet[currentImageIndex];
-                
-                // Determine if it's primary or secondary for alt text
-                const isPrimary = catalogue.primaryImages.includes(newImageSrc);
-                const imageType = isPrimary ? 'Primary' : 'Secondary';
-                const imageSet = isPrimary ? catalogue.primaryImages : catalogue.secondaryImages;
-                const positionInSet = imageSet.indexOf(newImageSrc) + 1;
-                
-                modalImg.src = newImageSrc;
-                captionText.innerHTML = `${catalogue.name} - ${imageType} Image (${positionInSet}/${imageSet.length})`;
+        function handleKeyDown(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            } else if (e.key === 'ArrowRight') {
+                navigateImages(1); // Next image
+            } else if (e.key === 'ArrowLeft') {
+                navigateImages(-1); // Previous image
             }
+        }
 
-            function closeModal() {
-                modal.style.display = "none";
-                document.body.style.overflow = "auto";
-                document.removeEventListener('keydown', handleKeyDown);
-                currentImageSet = [];
+        function navigateImages(direction) {
+            if (currentImageSet.length === 0) return;
+            
+            currentImageIndex += direction;
+            
+            // Handle wrap-around
+            if (currentImageIndex >= currentImageSet.length) {
                 currentImageIndex = 0;
-                currentCatalogueId = null;
+            } else if (currentImageIndex < 0) {
+                currentImageIndex = currentImageSet.length - 1;
             }
-
-            closeBtn.onclick = closeModal;
-            modal.onclick = function(event) {
-                if (event.target === modal) {
-                    closeModal();
-                }
-            };
+            
+            modalImg.src = currentImageSet[currentImageIndex];
+            const catalogue = catalogues[currentCatalogueIndex];
+            const isPrimary = currentImageIndex < catalogue.primaryImages.length;
+            const imageType = isPrimary ? 'Primary' : 'Secondary';
+            const imageNumber = isPrimary ? currentImageIndex + 1 : currentImageIndex - catalogue.primaryImages.length + 1;
+            captionText.innerHTML = `${catalogue.name} - ${imageType} Image ${imageNumber}`;
         }
 
-        // Search functionality
-        function setupSearchFunctionality() {
-            let searchOpen = false;
+        function closeModal() {
+            modal.style.display = "none";
+            document.body.style.overflow = "auto";
+            document.removeEventListener('keydown', handleKeyDown);
+        }
 
-            // Toggle search bar
-            searchToggleBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                toggleSearch();
+        closeBtn.onclick = closeModal;
+        modal.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+    }
+
+    // Search functionality
+    function setupSearchFunctionality() {
+        let searchOpen = false;
+
+        // Toggle search bar
+        searchToggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleSearch();
+        });
+
+        // Quick search buttons
+        quickSearchButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const query = button.getAttribute('data-query');
+                searchBar.value = query;
+                searchBar.dispatchEvent(new Event('input'));
+                if (searchOpen) toggleSearch();
             });
+        });
 
-            // Quick search buttons
-            quickSearchButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const query = button.getAttribute('data-query');
-                    searchBar.value = query;
-                    searchBar.dispatchEvent(new Event('input'));
-                    if (searchOpen) toggleSearch();
-                });
+        // Live search
+        searchBar.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const catalogueElements = document.querySelectorAll(".catalogue");
+            
+            catalogueElements.forEach(catalogue => {
+                const textContent = catalogue.textContent.toLowerCase();
+                catalogue.style.display = textContent.includes(query) ? "block" : "none";
             });
+        });
 
-            // Live search
-            searchBar.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
-                const catalogueElements = document.querySelectorAll(".catalogue");
-                
-                catalogueElements.forEach(catalogue => {
-                    const textContent = catalogue.textContent.toLowerCase();
-                    catalogue.style.display = textContent.includes(query) ? "block" : "none";
-                });
-            });
-
-            function toggleSearch() {
-                searchOpen = !searchOpen;
-                searchBar.classList.toggle('active');
-                searchHeader.classList.toggle('search-active');
-                
-                if (searchOpen) {
-                    setTimeout(() => searchBar.focus(), 300);
-                } else {
-                    searchBar.value = '';
-                    searchBar.dispatchEvent(new Event('input'));
-                }
+        function toggleSearch() {
+            searchOpen = !searchOpen;
+            searchBar.classList.toggle('active');
+            searchHeader.classList.toggle('search-active');
+            
+            if (searchOpen) {
+                setTimeout(() => searchBar.focus(), 300);
+            } else {
+                searchBar.value = '';
+                searchBar.dispatchEvent(new Event('input'));
             }
         }
-    </script>
+    }
+</script>
+
 </body>
 </html>
