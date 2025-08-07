@@ -15,7 +15,7 @@ urls = [
 # Namespace for WordPress sitemaps
 ns = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
 
-with open("url.txt", "w", encoding="utf-8") as txt_file:
+with open("closetcloud/url.txt", "w", encoding="utf-8") as txt_file:
     # Process each sitemap and write data
     for sitemap_url in urls:
         print(f"Fetching: {sitemap_url}")
