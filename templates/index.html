@@ -367,16 +367,41 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+/* Add to your existing styles */
+label {
+    cursor: pointer;
+    font-size: 14px;
+    color: #2c3e50;
+}
+
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.btn.reset-btn {
+    background-color: #7f8c8d;
+    color: white;
+}
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Product Database Manager</h1>
-        
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Search products...">
-            <button onclick="showAddModal()" class="btn add-btn">Add New Product</button>
-        </div>
+<div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search products by title, SKU or categories...">
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <button onclick="findDuplicates()" class="btn" style="background-color: #16a085;">Find Duplicates</button>
+        <label style="display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" id="hidePlaceholders" style="margin: 0;">
+            Exclude placeholder images
+        </label>
+        <button onclick="resetFilters()" class="btn" style="background-color: #7f8c8d;">Reset Filters</button>
+        <button onclick="showAddModal()" class="btn add-btn">Add New Product</button>
+    </div>
+	
+</div>
         
         <div class="bulk-actions" id="bulkActions">
             <div class="select-all">
@@ -499,7 +524,7 @@
 
     <script>
         let currentPage = 1;
-        const itemsPerPage = 10;
+        const itemsPerPage = 500;
         let totalProducts = 0;
         let allProducts = [];
         let filteredProducts = [];
@@ -658,18 +683,75 @@
             const bulkActions = document.getElementById('bulkActions');
             bulkActions.style.display = selectedProducts.size > 0 ? 'flex' : 'none';
         }
-
-        function searchProducts() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            filteredProducts = allProducts.filter(product => 
-                product.title.toLowerCase().includes(searchTerm) || 
-                product.sku.toLowerCase().includes(searchTerm)
-            );
-            totalProducts = filteredProducts.length;
-            currentPage = 1;
-            displayProducts(getPaginatedProducts());
-            updatePagination();
+function findDuplicates() {
+    const hidePlaceholders = document.getElementById('hidePlaceholders').checked;
+    const skuMap = {};
+    const duplicates = [];
+    
+    allProducts.forEach(product => {
+        if (!skuMap[product.sku]) {
+            skuMap[product.sku] = [];
         }
+        skuMap[product.sku].push(product);
+    });
+    
+    for (const sku in skuMap) {
+        if (skuMap[sku].length > 1) {
+            // Filter out placeholders if checkbox is checked
+            const productsToAdd = hidePlaceholders 
+                ? skuMap[sku].filter(p => !p.image_url.includes('woocommerce-placeholder.png'))
+                : skuMap[sku];
+                
+            if (productsToAdd.length > 0) {
+                duplicates.push(...productsToAdd);
+            }
+        }
+    }
+    
+    if (duplicates.length > 0) {
+        filteredProducts = duplicates;
+        currentPage = 1;
+        totalProducts = filteredProducts.length;
+        displayProducts(getPaginatedProducts());
+        updatePagination();
+        showToast(`Found ${duplicates.length} duplicate products`, 'warning');
+    } else {
+        const message = hidePlaceholders 
+            ? 'No duplicate products found (excluding placeholders)'
+            : 'No duplicate products found';
+        showToast(message, 'info');
+        // Optionally reset to show all products:
+        // filteredProducts = [...allProducts];
+        // currentPage = 1;
+        // totalProducts = filteredProducts.length;
+        // displayProducts(getPaginatedProducts());
+        // updatePagination();
+    }
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('hidePlaceholders').checked = false;
+    filteredProducts = [...allProducts];
+    currentPage = 1;
+    totalProducts = filteredProducts.length;
+    displayProducts(getPaginatedProducts());
+    updatePagination();
+}
+
+
+function searchProducts() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    filteredProducts = allProducts.filter(product => 
+        product.title.toLowerCase().includes(searchTerm) || 
+        product.sku.toLowerCase().includes(searchTerm) ||
+        JSON.stringify(product.categories).toLowerCase().includes(searchTerm)
+    );
+    totalProducts = filteredProducts.length;
+    currentPage = 1;
+    displayProducts(getPaginatedProducts());
+    updatePagination();
+}
 
         function updatePagination() {
             const totalPages = Math.ceil(totalProducts / itemsPerPage);
