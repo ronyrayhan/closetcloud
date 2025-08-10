@@ -35,6 +35,7 @@
             justify-content: space-between;
             margin-bottom: 25px;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         #searchInput {
@@ -44,6 +45,7 @@
             border-radius: 6px;
             font-size: 16px;
             transition: border-color 0.3s;
+            min-width: 250px;
         }
 
         #searchInput:focus {
@@ -162,6 +164,16 @@
             padding: 12px 20px;
         }
 
+        .duplicate-btn {
+            background-color: #16a085;
+            color: white;
+        }
+
+        .reset-btn {
+            background-color: #7f8c8d;
+            color: white;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -241,6 +253,7 @@
             align-items: center;
             margin-top: 30px;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         .pagination button {
@@ -363,45 +376,89 @@
             background: #f39c12;
         }
 
+        .toast.info {
+            background: #3498db;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-/* Add to your existing styles */
-label {
+
+        .filter-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .filter-controls label {
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .filter-controls input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        #totalProductsInfo {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .duplicate-row {
+            background-color: #fff9e6 !important;
+        }
+		/* Add to your existing styles */
+tr.clickable-row {
     cursor: pointer;
-    font-size: 14px;
-    color: #2c3e50;
 }
 
-input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
+tr.clickable-row:hover {
+    background-color: #f0f8ff !important;
 }
 
-.btn.reset-btn {
-    background-color: #7f8c8d;
-    color: white;
+.product-checkbox {
+    pointer-events: none; /* Prevent checkbox from interfering with row click */
 }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Product Database Manager</h1>
-<div class="search-container">
-    <input type="text" id="searchInput" placeholder="Search products by title, SKU or categories...">
-    <div style="display: flex; gap: 10px; align-items: center;">
-        <button onclick="findDuplicates()" class="btn" style="background-color: #16a085;">Find Duplicates</button>
-        <label style="display: flex; align-items: center; gap: 5px;">
-            <input type="checkbox" id="hidePlaceholders" style="margin: 0;">
-            Exclude placeholder images
-        </label>
-        <button onclick="resetFilters()" class="btn" style="background-color: #7f8c8d;">Reset Filters</button>
-        <button onclick="showAddModal()" class="btn add-btn">Add New Product</button>
-    </div>
-	
-</div>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search products by title, SKU or categories...">
+            <div class="filter-controls">
+                <button onclick="findDuplicates()" class="btn duplicate-btn">Find Duplicates</button>
+                <label>
+                    <input type="checkbox" id="hidePlaceholders">
+                    Exclude placeholders
+                </label>
+                <button onclick="resetFilters()" class="btn reset-btn">Reset Filters</button>
+                <button onclick="showAddModal()" class="btn add-btn">Add New Product</button>
+            </div>
+        </div>
         
         <div class="bulk-actions" id="bulkActions">
             <div class="select-all">
@@ -421,6 +478,14 @@ input[type="checkbox"] {
             <button id="prevPage" onclick="changePage(-1)">Previous</button>
             <span id="pageInfo">Page 1 of 1</span>
             <button id="nextPage" onclick="changePage(1)">Next</button>
+            <select id="itemsPerPage" onchange="changeItemsPerPage()">
+                <option value="10">10 per page</option>
+                <option value="25">25 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+                <option value="0">All products</option>
+            </select>
+            <span id="totalProductsInfo"></span>
         </div>
     </div>
 
@@ -524,11 +589,12 @@ input[type="checkbox"] {
 
     <script>
         let currentPage = 1;
-        const itemsPerPage = 500;
+        let itemsPerPage = 10;
         let totalProducts = 0;
         let allProducts = [];
         let filteredProducts = [];
         let selectedProducts = new Set();
+        let showingDuplicates = false;
 
         document.addEventListener('DOMContentLoaded', function() {
             loadProducts();
@@ -546,6 +612,7 @@ input[type="checkbox"] {
                 filteredProducts = [...allProducts];
                 displayProducts(getPaginatedProducts());
                 updatePagination();
+                updateTotalProductsInfo();
             } catch (error) {
                 console.error('Error loading products:', error);
                 document.getElementById('productsTable').innerHTML = `
@@ -572,67 +639,75 @@ input[type="checkbox"] {
         }
 
         function getPaginatedProducts() {
+            if (itemsPerPage === 0) {
+                return filteredProducts;
+            }
             const startIndex = (currentPage - 1) * itemsPerPage;
             return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
         }
 
-        function displayProducts(products) {
-            if (products.length === 0) {
-                document.getElementById('productsTable').innerHTML = '<p>No products found.</p>';
-                return;
-            }
+function displayProducts(products) {
+    if (products.length === 0) {
+        document.getElementById('productsTable').innerHTML = '<p>No products found.</p>';
+        return;
+    }
 
-            const tableHtml = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th><input type="checkbox" id="selectAllHeader" class="select-checkbox"></th>
-                            <th>ID</th>
-                            <th>Title</th>
-                            <th>SKU</th>
-                            <th>Price</th>
-                            <th>Image</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${products.map(product => `
-                            <tr>
-                                <td><input type="checkbox" class="product-checkbox select-checkbox" data-id="${product.id}" 
-                                    ${selectedProducts.has(product.id.toString()) ? 'checked' : ''}></td>
-                                <td>${product.id}</td>
-                                <td>${escapeHtml(product.title)}</td>
-                                <td>${escapeHtml(product.sku)}</td>
-                                <td>${escapeHtml(product.price)}</td>
-                                <td><img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.title)}" class="product-image" onerror="this.src='https://via.placeholder.com/100?text=No+Image'"></td>
-                                <td class="action-btns">
-                                    <button class="btn edit-btn" onclick="showEditModal(${product.id})">Edit</button>
-                                    <button class="btn delete-btn" onclick="confirmDelete(${product.id})">Delete</button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            document.getElementById('productsTable').innerHTML = tableHtml;
-            
+    const tableHtml = `
+        <table>
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAllHeader" class="select-checkbox"></th>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>SKU</th>
+                    <th>Price</th>
+                    <th>Image</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${products.map(product => `
+                    <tr class="clickable-row ${isDuplicate(product) ? 'duplicate-row' : ''}" 
+                        onclick="toggleRowSelection(this, ${product.id})">
+                        <td><input type="checkbox" class="product-checkbox select-checkbox" data-id="${product.id}" 
+                            ${selectedProducts.has(product.id.toString()) ? 'checked' : ''}></td>
+                        <td>${product.id}</td>
+                        <td>${escapeHtml(product.title)}</td>
+                        <td>${escapeHtml(product.sku)}</td>
+                        <td>${escapeHtml(product.price)}</td>
+                        <td><img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.title)}" class="product-image" onerror="this.src='https://via.placeholder.com/100?text=No+Image'"></td>
+                        <td class="action-btns">
+                            <button class="btn edit-btn" onclick="showEditModal(${product.id}); event.stopPropagation()">Edit</button>
+                            <button class="btn delete-btn" onclick="confirmDelete(${product.id}); event.stopPropagation()">Delete</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    document.getElementById('productsTable').innerHTML = tableHtml;
+    
+           
             // Add event listeners to checkboxes
             document.querySelectorAll('.product-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', function() {
                     toggleProductSelection(this);
                 });
                 
-                // Highlight row if selected
                 if (checkbox.checked) {
                     checkbox.closest('tr').classList.add('selected-row');
                 }
             });
             
-            // Add event listener to select all header checkbox
             document.getElementById('selectAllHeader').addEventListener('change', function() {
                 document.getElementById('selectAll').checked = this.checked;
                 toggleSelectAll();
             });
+        }
+
+        function isDuplicate(product) {
+            if (!showingDuplicates) return false;
+            return allProducts.filter(p => p.sku === product.sku).length > 1;
         }
 
         function toggleSelectAll() {
@@ -655,7 +730,24 @@ input[type="checkbox"] {
             updateSelectedCount();
             toggleBulkActions();
         }
-
+function toggleRowSelection(row, productId) {
+    // Don't toggle if clicking on action buttons (handled by stopPropagation)
+    const checkbox = row.querySelector('.product-checkbox');
+    checkbox.checked = !checkbox.checked;
+    
+    if (checkbox.checked) {
+        selectedProducts.add(productId.toString());
+        row.classList.add('selected-row');
+    } else {
+        selectedProducts.delete(productId.toString());
+        row.classList.remove('selected-row');
+        document.getElementById('selectAll').checked = false;
+        document.getElementById('selectAllHeader').checked = false;
+    }
+    
+    updateSelectedCount();
+    toggleBulkActions();
+}
         function toggleProductSelection(checkbox) {
             const productId = checkbox.getAttribute('data-id');
             const row = checkbox.closest('tr');
@@ -683,92 +775,112 @@ input[type="checkbox"] {
             const bulkActions = document.getElementById('bulkActions');
             bulkActions.style.display = selectedProducts.size > 0 ? 'flex' : 'none';
         }
-function findDuplicates() {
-    const hidePlaceholders = document.getElementById('hidePlaceholders').checked;
-    const skuMap = {};
-    const duplicates = [];
-    
-    allProducts.forEach(product => {
-        if (!skuMap[product.sku]) {
-            skuMap[product.sku] = [];
+
+        function searchProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filteredProducts = allProducts.filter(product => 
+                product.title.toLowerCase().includes(searchTerm) || 
+                product.sku.toLowerCase().includes(searchTerm) ||
+                JSON.stringify(product.categories).toLowerCase().includes(searchTerm)
+            );
+            totalProducts = filteredProducts.length;
+            currentPage = 1;
+            displayProducts(getPaginatedProducts());
+            updatePagination();
+            updateTotalProductsInfo();
         }
-        skuMap[product.sku].push(product);
-    });
-    
-    for (const sku in skuMap) {
-        if (skuMap[sku].length > 1) {
-            // Filter out placeholders if checkbox is checked
-            const productsToAdd = hidePlaceholders 
-                ? skuMap[sku].filter(p => !p.image_url.includes('woocommerce-placeholder.png'))
-                : skuMap[sku];
-                
-            if (productsToAdd.length > 0) {
-                duplicates.push(...productsToAdd);
-            }
-        }
-    }
-    
-    if (duplicates.length > 0) {
-        filteredProducts = duplicates;
-        currentPage = 1;
-        totalProducts = filteredProducts.length;
-        displayProducts(getPaginatedProducts());
-        updatePagination();
-        showToast(`Found ${duplicates.length} duplicate products`, 'warning');
-    } else {
-        const message = hidePlaceholders 
-            ? 'No duplicate products found (excluding placeholders)'
-            : 'No duplicate products found';
-        showToast(message, 'info');
-        // Optionally reset to show all products:
-        // filteredProducts = [...allProducts];
-        // currentPage = 1;
-        // totalProducts = filteredProducts.length;
-        // displayProducts(getPaginatedProducts());
-        // updatePagination();
-    }
-}
-
-function resetFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('hidePlaceholders').checked = false;
-    filteredProducts = [...allProducts];
-    currentPage = 1;
-    totalProducts = filteredProducts.length;
-    displayProducts(getPaginatedProducts());
-    updatePagination();
-}
-
-
-function searchProducts() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    filteredProducts = allProducts.filter(product => 
-        product.title.toLowerCase().includes(searchTerm) || 
-        product.sku.toLowerCase().includes(searchTerm) ||
-        JSON.stringify(product.categories).toLowerCase().includes(searchTerm)
-    );
-    totalProducts = filteredProducts.length;
-    currentPage = 1;
-    displayProducts(getPaginatedProducts());
-    updatePagination();
-}
 
         function updatePagination() {
-            const totalPages = Math.ceil(totalProducts / itemsPerPage);
-            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
-            document.getElementById('prevPage').disabled = currentPage === 1;
-            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+            const totalPages = itemsPerPage === 0 ? 1 : Math.ceil(totalProducts / itemsPerPage);
+            document.getElementById('pageInfo').textContent = itemsPerPage === 0 ? '' : `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1 || itemsPerPage === 0;
+            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0 || itemsPerPage === 0;
+        }
+
+        function updateTotalProductsInfo() {
+            const totalInfo = document.getElementById('totalProductsInfo');
+            if (itemsPerPage === 0) {
+                totalInfo.textContent = `Showing all ${totalProducts} products`;
+            } else {
+                const start = ((currentPage - 1) * itemsPerPage) + 1;
+                const end = Math.min(currentPage * itemsPerPage, totalProducts);
+                totalInfo.textContent = `Showing ${start}-${end} of ${totalProducts} products`;
+            }
         }
 
         function changePage(direction) {
             const newPage = currentPage + direction;
-            const totalPages = Math.ceil(totalProducts / itemsPerPage);
+            const totalPages = itemsPerPage === 0 ? 1 : Math.ceil(totalProducts / itemsPerPage);
             
             if (newPage > 0 && newPage <= totalPages) {
                 currentPage = newPage;
                 displayProducts(getPaginatedProducts());
                 updatePagination();
+                updateTotalProductsInfo();
             }
+        }
+
+        function changeItemsPerPage() {
+            itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+            currentPage = 1;
+            displayProducts(getPaginatedProducts());
+            updatePagination();
+            updateTotalProductsInfo();
+        }
+
+        function findDuplicates() {
+            const hidePlaceholders = document.getElementById('hidePlaceholders').checked;
+            const skuMap = {};
+            const duplicates = [];
+            
+            showingDuplicates = true;
+            
+            allProducts.forEach(product => {
+                if (!skuMap[product.sku]) {
+                    skuMap[product.sku] = [];
+                }
+                skuMap[product.sku].push(product);
+            });
+            
+            for (const sku in skuMap) {
+                if (skuMap[sku].length > 1) {
+                    const productsToAdd = hidePlaceholders 
+                        ? skuMap[sku].filter(p => !p.image_url.includes('woocommerce-placeholder.png'))
+                        : skuMap[sku];
+                        
+                    if (productsToAdd.length > 0) {
+                        duplicates.push(...productsToAdd);
+                    }
+                }
+            }
+            
+            if (duplicates.length > 0) {
+                filteredProducts = duplicates;
+                currentPage = 1;
+                totalProducts = filteredProducts.length;
+                displayProducts(getPaginatedProducts());
+                updatePagination();
+                updateTotalProductsInfo();
+                showToast(`Found ${duplicates.length} duplicate products`, 'warning');
+            } else {
+                const message = hidePlaceholders 
+                    ? 'No duplicate products found (excluding placeholders)'
+                    : 'No duplicate products found';
+                showToast(message, 'info');
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('hidePlaceholders').checked = false;
+            showingDuplicates = false;
+            filteredProducts = [...allProducts];
+            totalProducts = filteredProducts.length;
+            currentPage = 1;
+            displayProducts(getPaginatedProducts());
+            updatePagination();
+            updateTotalProductsInfo();
+            showToast('Filters reset', 'info');
         }
 
         function showAddModal() {
@@ -838,7 +950,6 @@ function searchProducts() {
         function closeBulkEditModal() {
             document.getElementById('bulkEditModal').style.display = 'none';
             document.getElementById('bulkEditForm').reset();
-            // Hide all bulk edit fields
             document.querySelectorAll('[id$="Field"]').forEach(field => {
                 field.style.display = 'none';
             });
@@ -917,7 +1028,6 @@ function searchProducts() {
         async function applyBulkEdit() {
             const updates = {};
             
-            // Collect all the updates
             if (document.getElementById('bulkEditTitle').checked) {
                 const title = document.getElementById('bulkTitle').value;
                 if (!title) {
@@ -967,7 +1077,6 @@ function searchProducts() {
                 saveBtn.disabled = true;
                 saveBtn.textContent = 'Updating...';
                 
-                // Process each selected product
                 const productIds = Array.from(selectedProducts);
                 const promises = productIds.map(productId => 
                     fetch(`/api/products/${productId}`, {
@@ -986,7 +1095,6 @@ function searchProducts() {
                 
                 await Promise.all(promises);
                 
-                // Close modal and refresh
                 closeBulkEditModal();
                 await loadProducts();
                 showToast(`Updated ${productIds.length} products successfully!`);
@@ -1046,7 +1154,6 @@ function searchProducts() {
                 deleteBtn.disabled = true;
                 deleteBtn.textContent = 'Deleting...';
                 
-                // Process each selected product
                 const productIds = Array.from(selectedProducts);
                 const promises = productIds.map(productId => 
                     fetch(`/api/products/${productId}`, {
@@ -1061,7 +1168,6 @@ function searchProducts() {
                 
                 await Promise.all(promises);
                 
-                // Refresh and reset
                 await loadProducts();
                 selectedProducts.clear();
                 updateSelectedCount();
@@ -1087,7 +1193,6 @@ function searchProducts() {
             toast.className = `toast ${type}`;
             toast.textContent = message;
             
-            // Remove any existing toasts
             const existingToast = document.querySelector('.toast');
             if (existingToast) existingToast.remove();
             
