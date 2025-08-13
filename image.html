@@ -14,6 +14,7 @@
             --border-color: #eaeaea;
             --success-color: #4caf50;
             --error-color: #ff4444;
+            --warning-color: #ff9800;
         }
         
         * {
@@ -179,6 +180,19 @@
         .product .sku {
             font-size: 12px;
             color: var(--secondary-color);
+        }
+        
+        .date-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 11px;
+            color: var(--secondary-color);
+        }
+        
+        .last-updated {
+            color: var(--warning-color);
+            font-weight: 500;
         }
         
         .category-section {
@@ -423,10 +437,7 @@
                 <option value="400">400</option>
             </select>
         </div>
-        <div class="toggle-container">
-            <input type="checkbox" id="hidePlaceholders" checked>
-            <label for="hidePlaceholders">Hide Without Images</label>
-        </div>
+
     </div>
     
     <div id="product-count">Loading products...</div>
@@ -455,6 +466,7 @@
         let productsPerPage = 12;
         let currentPage = 1;
         let hidePlaceholders = true;
+        let showOutdated = true;
         
         // Load the SQLite database file
         async function loadDatabase() {
@@ -477,7 +489,7 @@
         async function fetchProducts() {
             document.getElementById("loading").style.display = "block";
             const db = await loadDatabase();
-            const query = "SELECT * FROM products";
+            const query = "SELECT * FROM scraped_products";
             const results = db.exec(query);
             document.getElementById("loading").style.display = "none";
 
@@ -489,11 +501,14 @@
                     price: row[3],
                     image_url: row[4],
                     url: row[5],
-                    categories: JSON.parse(row[6])
+                    categories: JSON.parse(row[6]),
+                    scraped_date: row[7],
+                    last_modified: row[8]
                 }));
                 
-                // Set the initial state of the checkbox
+                // Set the initial state of the checkboxes
                 document.getElementById("hidePlaceholders").checked = hidePlaceholders;
+                document.getElementById("showOutdated").checked = showOutdated;
                 
                 filteredProducts = [...allProducts];
                 updateProductCount();
@@ -525,6 +540,11 @@
                             <div class="sku">SKU: ${product.sku}</div>
                         </div>
                         
+                        <div class="date-section">
+                            <div>Scraped: ${formatDate(product.scraped_date)}</div>
+                            ${product.last_modified ? `<div class="last-updated">Updated: ${formatDate(product.last_modified)}</div>` : ''}
+                        </div>
+                        
                         <div class="category-section">
                             ${product.categories.map(cat => `
                                 <div class="category-item">
@@ -554,6 +574,13 @@
             `).join("");
             
             updateShowingCount();
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
         // Setup pagination buttons
@@ -617,9 +644,13 @@
                 const title = product.title.toLowerCase();
                 const sku = product.sku.toLowerCase();
                 const isPlaceholder = product.image_url.includes('woocommerce-placeholder');
+                const isOutdated = isProductOutdated(product);
                 
                 // Skip if we're hiding placeholders and this is one
                 if (hidePlaceholders && isPlaceholder) return false;
+                
+                // Skip if we're hiding outdated products and this is one
+                if (!showOutdated && isOutdated) return false;
                 
                 return title.includes(query) || sku.includes(query);
             });
@@ -629,6 +660,8 @@
             displayProducts();
             setupPagination();
         }
+
+
 
         // Update product count display
         function updateProductCount() {
@@ -663,6 +696,12 @@
         // Handle placeholder toggle change
         document.getElementById("hidePlaceholders").addEventListener("change", (e) => {
             hidePlaceholders = e.target.checked;
+            searchProducts(document.getElementById("searchBar").value);
+        });
+
+        // Handle outdated products toggle change
+        document.getElementById("showOutdated").addEventListener("change", (e) => {
+            showOutdated = e.target.checked;
             searchProducts(document.getElementById("searchBar").value);
         });
 
