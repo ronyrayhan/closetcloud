@@ -465,8 +465,7 @@
         let filteredProducts = [];
         let productsPerPage = 12;
         let currentPage = 1;
-        let hidePlaceholders = true;
-        let showOutdated = true;
+
         
         // Load the SQLite database file
         async function loadDatabase() {
@@ -507,8 +506,7 @@
                 }));
                 
                 // Set the initial state of the checkboxes
-                document.getElementById("hidePlaceholders").checked = hidePlaceholders;
-                document.getElementById("showOutdated").checked = showOutdated;
+
                 
                 filteredProducts = [...allProducts];
                 updateProductCount();
@@ -643,14 +641,8 @@
             filteredProducts = allProducts.filter(product => {
                 const title = product.title.toLowerCase();
                 const sku = product.sku.toLowerCase();
-                const isPlaceholder = product.image_url.includes('woocommerce-placeholder');
-                const isOutdated = isProductOutdated(product);
-                
-                // Skip if we're hiding placeholders and this is one
-                if (hidePlaceholders && isPlaceholder) return false;
-                
-                // Skip if we're hiding outdated products and this is one
-                if (!showOutdated && isOutdated) return false;
+
+
                 
                 return title.includes(query) || sku.includes(query);
             });
@@ -693,25 +685,17 @@
             setupPagination();
         });
 
-        // Handle placeholder toggle change
-        document.getElementById("hidePlaceholders").addEventListener("change", (e) => {
-            hidePlaceholders = e.target.checked;
-            searchProducts(document.getElementById("searchBar").value);
-        });
 
-        // Handle outdated products toggle change
-        document.getElementById("showOutdated").addEventListener("change", (e) => {
-            showOutdated = e.target.checked;
-            searchProducts(document.getElementById("searchBar").value);
-        });
+
 
         // Copy product details to clipboard
         function copyToClipboard(button) {
             const product = button.closest(".product");
             const price = product.querySelector(".price").textContent.trim();
             const url = product.querySelector("a").href;
+			const sku = product.querySelector(".sku").textContent.trim();
 
-            const textToCopy = `Price: ${price}\nURL: ${url}`;
+            const textToCopy = `Price: ${price}\n${sku}\nURL: ${url}`;
 
             navigator.clipboard.writeText(textToCopy).then(() => {
                 showCopyNotification("Product details copied!");
