@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Database Manager</title>
-    <style>
-        body {
+    <title>Closet Cloud Product Manager</title>
+	<style>body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             margin: 0;
@@ -440,23 +439,22 @@ tr.clickable-row:hover {
 
 .product-checkbox {
     pointer-events: none; /* Prevent checkbox from interfering with row click */
-}
-    </style>
+}</style>
 </head>
 <body>
     <div class="container">
-        <h1>Product Database Manager</h1>
+        <h1>Closet Cloud Product Manager</h1>
         
         <div class="search-container">
             <input type="text" id="searchInput" placeholder="Search products by title, SKU or categories...">
             <div class="filter-controls">
                 <button onclick="findDuplicates()" class="btn duplicate-btn">Find Duplicates</button>
                 <label>
-                    <input type="checkbox" id="hidePlaceholders">
-                    Exclude placeholders
+                    <input type="checkbox" id="hideOutOfStock">
+                    Hide Out of Stock
                 </label>
                 <button onclick="resetFilters()" class="btn reset-btn">Reset Filters</button>
-                <button onclick="showAddModal()" class="btn add-btn">Add New Product</button>
+                <button onclick="showScrapeModal()" class="btn add-btn">Scrape Product</button>
             </div>
         </div>
         
@@ -532,6 +530,36 @@ tr.clickable-row:hover {
         </div>
     </div>
 
+    <!-- Scrape Product Modal -->
+    <div id="scrapeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeScrapeModal()">&times;</span>
+            <h2>Scrape Product</h2>
+            <form id="scrapeForm">
+                <div class="form-group">
+                    <label for="scrapeUrl">Product URL:</label>
+                    <input type="text" id="scrapeUrl" placeholder="https://closetcloud.com/product/..." required>
+                </div>
+                <div class="action-btns">
+                    <button type="button" class="btn save-btn" onclick="scrapeProduct()">Scrape Now</button>
+                    <button type="button" class="btn cancel-btn" onclick="closeScrapeModal()">Cancel</button>
+                </div>
+            </form>
+            <div id="scrapeResults" style="margin-top: 20px; display: none;">
+                <h3>Scraping Results</h3>
+                <div id="scrapeStatus" class="form-group"></div>
+                <div id="scrapedPreview" class="image-preview-container">
+                    <div id="scrapedImagePreviewPlaceholder" class="image-preview-placeholder">Image will appear here</div>
+                    <img id="scrapedImagePreview" class="image-preview" style="display: none;" 
+                        onerror="this.style.display='none'; document.getElementById('scrapedImagePreviewPlaceholder').style.display='flex';">
+                </div>
+                <div class="action-btns" style="justify-content: center; margin-top: 20px;">
+                    <button type="button" class="btn save-btn" onclick="saveScrapedProduct()" style="display: none;" id="saveScrapedBtn">Save Product</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bulk Edit Modal -->
     <div id="bulkEditModal" class="modal">
         <div class="modal-content">
@@ -595,10 +623,12 @@ tr.clickable-row:hover {
         let filteredProducts = [];
         let selectedProducts = new Set();
         let showingDuplicates = false;
+        let scrapedProductData = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             loadProducts();
             document.getElementById('searchInput').addEventListener('input', searchProducts);
+            document.getElementById('hideOutOfStock').addEventListener('change', filterOutOfStock);
         });
 
         async function loadProducts() {
@@ -646,49 +676,49 @@ tr.clickable-row:hover {
             return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
         }
 
-function displayProducts(products) {
-    if (products.length === 0) {
-        document.getElementById('productsTable').innerHTML = '<p>No products found.</p>';
-        return;
-    }
+        function displayProducts(products) {
+            if (products.length === 0) {
+                document.getElementById('productsTable').innerHTML = '<p>No products found.</p>';
+                return;
+            }
 
-    const tableHtml = `
-        <table>
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="selectAllHeader" class="select-checkbox"></th>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>SKU</th>
-                    <th>Price</th>
-                    <th>Image</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${products.map(product => `
-                    <tr class="clickable-row ${isDuplicate(product) ? 'duplicate-row' : ''}" 
-                        onclick="toggleRowSelection(this, ${product.id})">
-                        <td><input type="checkbox" class="product-checkbox select-checkbox" data-id="${product.id}" 
-                            ${selectedProducts.has(product.id.toString()) ? 'checked' : ''}></td>
-                        <td>${product.id}</td>
-                        <td>${escapeHtml(product.title)}</td>
-                        <td>${escapeHtml(product.sku)}</td>
-                        <td>${escapeHtml(product.price)}</td>
-                        <td><img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.title)}" class="product-image" onerror="this.src='https://via.placeholder.com/100?text=No+Image'"></td>
-                        <td class="action-btns">
-                            <button class="btn edit-btn" onclick="showEditModal(${product.id}); event.stopPropagation()">Edit</button>
-                            <button class="btn delete-btn" onclick="confirmDelete(${product.id}); event.stopPropagation()">Delete</button>
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-    document.getElementById('productsTable').innerHTML = tableHtml;
-    
-           
-            // Add event listeners to checkboxes
+            const tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllHeader" class="select-checkbox"></th>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>SKU</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Image</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${products.map(product => `
+                            <tr class="clickable-row ${isDuplicate(product) ? 'duplicate-row' : ''}" 
+                                onclick="toggleRowSelection(this, ${product.id})">
+                                <td><input type="checkbox" class="product-checkbox select-checkbox" data-id="${product.id}" 
+                                    ${selectedProducts.has(product.id.toString()) ? 'checked' : ''}></td>
+                                <td>${product.id}</td>
+                                <td>${escapeHtml(product.title)}</td>
+                                <td>${escapeHtml(product.sku)}</td>
+                                <td>${escapeHtml(product.price)}</td>
+                                <td>${product.is_out_of_stock ? 'Out of Stock' : 'In Stock'}</td>
+                                <td><img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.title)}" class="product-image" onerror="this.src='https://via.placeholder.com/100?text=No+Image'"></td>
+                                <td class="action-btns">
+                                    <button class="btn edit-btn" onclick="showEditModal(${product.id}); event.stopPropagation()">Edit</button>
+                                    <button class="btn delete-btn" onclick="confirmDelete(${product.id}); event.stopPropagation()">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('productsTable').innerHTML = tableHtml;
+            
             document.querySelectorAll('.product-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', function() {
                     toggleProductSelection(this);
@@ -730,24 +760,25 @@ function displayProducts(products) {
             updateSelectedCount();
             toggleBulkActions();
         }
-function toggleRowSelection(row, productId) {
-    // Don't toggle if clicking on action buttons (handled by stopPropagation)
-    const checkbox = row.querySelector('.product-checkbox');
-    checkbox.checked = !checkbox.checked;
-    
-    if (checkbox.checked) {
-        selectedProducts.add(productId.toString());
-        row.classList.add('selected-row');
-    } else {
-        selectedProducts.delete(productId.toString());
-        row.classList.remove('selected-row');
-        document.getElementById('selectAll').checked = false;
-        document.getElementById('selectAllHeader').checked = false;
-    }
-    
-    updateSelectedCount();
-    toggleBulkActions();
-}
+
+        function toggleRowSelection(row, productId) {
+            const checkbox = row.querySelector('.product-checkbox');
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                selectedProducts.add(productId.toString());
+                row.classList.add('selected-row');
+            } else {
+                selectedProducts.delete(productId.toString());
+                row.classList.remove('selected-row');
+                document.getElementById('selectAll').checked = false;
+                document.getElementById('selectAllHeader').checked = false;
+            }
+            
+            updateSelectedCount();
+            toggleBulkActions();
+        }
+
         function toggleProductSelection(checkbox) {
             const productId = checkbox.getAttribute('data-id');
             const row = checkbox.closest('tr');
@@ -783,6 +814,20 @@ function toggleRowSelection(row, productId) {
                 product.sku.toLowerCase().includes(searchTerm) ||
                 JSON.stringify(product.categories).toLowerCase().includes(searchTerm)
             );
+            totalProducts = filteredProducts.length;
+            currentPage = 1;
+            displayProducts(getPaginatedProducts());
+            updatePagination();
+            updateTotalProductsInfo();
+        }
+
+        function filterOutOfStock() {
+            const hideOutOfStock = document.getElementById('hideOutOfStock').checked;
+            if (hideOutOfStock) {
+                filteredProducts = allProducts.filter(p => !p.price.includes('Out of Stock'));
+            } else {
+                filteredProducts = [...allProducts];
+            }
             totalProducts = filteredProducts.length;
             currentPage = 1;
             displayProducts(getPaginatedProducts());
@@ -829,7 +874,6 @@ function toggleRowSelection(row, productId) {
         }
 
         function findDuplicates() {
-            const hidePlaceholders = document.getElementById('hidePlaceholders').checked;
             const skuMap = {};
             const duplicates = [];
             
@@ -844,13 +888,7 @@ function toggleRowSelection(row, productId) {
             
             for (const sku in skuMap) {
                 if (skuMap[sku].length > 1) {
-                    const productsToAdd = hidePlaceholders 
-                        ? skuMap[sku].filter(p => !p.image_url.includes('woocommerce-placeholder.png'))
-                        : skuMap[sku];
-                        
-                    if (productsToAdd.length > 0) {
-                        duplicates.push(...productsToAdd);
-                    }
+                    duplicates.push(...skuMap[sku]);
                 }
             }
             
@@ -863,16 +901,13 @@ function toggleRowSelection(row, productId) {
                 updateTotalProductsInfo();
                 showToast(`Found ${duplicates.length} duplicate products`, 'warning');
             } else {
-                const message = hidePlaceholders 
-                    ? 'No duplicate products found (excluding placeholders)'
-                    : 'No duplicate products found';
-                showToast(message, 'info');
+                showToast('No duplicate products found', 'info');
             }
         }
 
         function resetFilters() {
             document.getElementById('searchInput').value = '';
-            document.getElementById('hidePlaceholders').checked = false;
+            document.getElementById('hideOutOfStock').checked = false;
             showingDuplicates = false;
             filteredProducts = [...allProducts];
             totalProducts = filteredProducts.length;
@@ -937,6 +972,107 @@ function toggleRowSelection(row, productId) {
 
         function closeModal() {
             document.getElementById('editModal').style.display = 'none';
+        }
+
+        function showScrapeModal() {
+            document.getElementById('scrapeForm').reset();
+            document.getElementById('scrapeResults').style.display = 'none';
+            document.getElementById('saveScrapedBtn').style.display = 'none';
+            document.getElementById('scrapeModal').style.display = 'block';
+        }
+
+        function closeScrapeModal() {
+            document.getElementById('scrapeModal').style.display = 'none';
+        }
+
+        async function scrapeProduct() {
+            const url = document.getElementById('scrapeUrl').value.trim();
+            if (!url) {
+                showToast('Please enter a valid URL', 'error');
+                return;
+            }
+
+            try {
+                showLoader();
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                const result = await response.json();
+                if (result.status === 'error') {
+                    throw new Error(result.message);
+                }
+
+                // Get the full product details after scraping
+                const productResponse = await fetch(`/api/products/${result.product_id}`);
+                if (!productResponse.ok) throw new Error('Failed to fetch scraped product');
+                
+                scrapedProductData = await productResponse.json();
+                displayScrapedResults(scrapedProductData);
+                
+                showToast('Product scraped successfully!');
+            } catch (error) {
+                console.error('Error scraping product:', error);
+                document.getElementById('scrapeStatus').innerHTML = `
+                    <div class="error-message">Error: ${error.message}</div>
+                `;
+                document.getElementById('scrapeResults').style.display = 'block';
+            } finally {
+                hideLoader();
+            }
+        }
+
+        function displayScrapedResults(product) {
+            document.getElementById('scrapeStatus').innerHTML = `
+                <p><strong>Title:</strong> ${escapeHtml(product.title)}</p>
+                <p><strong>SKU:</strong> ${escapeHtml(product.sku)}</p>
+                <p><strong>Price:</strong> ${escapeHtml(product.price)}</p>
+                <p><strong>Stock Status:</strong> ${product.is_out_of_stock ? 'Out of Stock' : 'In Stock'}</p>
+            `;
+
+            if (product.image_url && product.image_url !== 'N/A') {
+                document.getElementById('scrapedImagePreview').src = product.image_url;
+                document.getElementById('scrapedImagePreview').style.display = 'block';
+                document.getElementById('scrapedImagePreviewPlaceholder').style.display = 'none';
+            } else {
+                document.getElementById('scrapedImagePreview').style.display = 'none';
+                document.getElementById('scrapedImagePreviewPlaceholder').style.display = 'flex';
+            }
+
+            document.getElementById('scrapeResults').style.display = 'block';
+            document.getElementById('saveScrapedBtn').style.display = 'block';
+        }
+
+        function saveScrapedProduct() {
+            if (!scrapedProductData) return;
+            
+            // If the product was already in our database (update case)
+            if (scrapedProductData.id) {
+                showEditModal(scrapedProductData.id);
+            } else {
+                // For new products, populate the add form
+                document.getElementById('modalTitle').textContent = 'Add Scraped Product';
+                document.getElementById('productForm').reset();
+                document.getElementById('productId').value = '';
+                document.getElementById('title').value = scrapedProductData.title;
+                document.getElementById('sku').value = scrapedProductData.sku;
+                document.getElementById('price').value = scrapedProductData.price;
+                document.getElementById('image_url').value = scrapedProductData.image_url;
+                document.getElementById('url').value = scrapedProductData.url;
+                document.getElementById('categories').value = JSON.stringify(scrapedProductData.categories, null, 2);
+                
+                updateImagePreview();
+                closeScrapeModal();
+                document.getElementById('editModal').style.display = 'block';
+            }
         }
 
         function showBulkEditModal() {
