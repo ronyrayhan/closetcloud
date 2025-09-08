@@ -1,0 +1,9 @@
+aiohttp
+asyncio
+beautifulsoup4
+json
+datetime
+sqlite3
+dateutil
+lxml
+requests
