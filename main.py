@@ -1,7 +1,7 @@
 import subprocess
 
 # List of script filenames to run in order
-scripts = ['deleteoutofstock.py', 'urltext.py','justupdate.py', 'imagrescrape.py']
+scripts = ['urltext.py','scrapenew.py']
 
 for script in scripts:
     print(f"Running {script}...")
